@@ -1,11 +1,11 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
 let prismaClient: PrismaClient;
 
 // Use a placeholder URL during the build phase if DATABASE_URL is missing to prevent build-time crashes
-const prismaOptions = process.env.DATABASE_URL
+const prismaOptions: Prisma.PrismaClientOptions = process.env.DATABASE_URL
   ? {}
   : {
       datasources: {
