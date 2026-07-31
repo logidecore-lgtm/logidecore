@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, Prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(
@@ -62,7 +62,7 @@ export async function PUT(
       materials,
     } = body;
 
-    const updated = await db.$transaction(async (tx) => {
+    const updated = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       // Update product
       const p = await tx.product.update({
         where: { id },

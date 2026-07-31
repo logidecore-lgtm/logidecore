@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, Prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 
 export async function GET() {
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
     }
 
     // Create product and nested models
-    const product = await db.$transaction(async (tx) => {
+    const product = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       const p = await tx.product.create({
         data: {
           categoryId,
