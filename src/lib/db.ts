@@ -1,28 +1,30 @@
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-
-let prismaClient: PrismaClient;
-
-const getPrismaClient = () => {
-  const hasDbUrl = !!process.env.DATABASE_URL;
-  const options = hasDbUrl
-    ? {}
-    : {
-        datasources: {
-          db: {
-            url: 'postgresql://placeholder-for-build-time-only',
-          },
-        },
-      };
-  return new PrismaClient(options as any);
+const globalForPrisma = global as unknown as { 
+  prisma: PrismaClient;
+  pool: Pool;
 };
 
+const connectionString = process.env.DATABASE_URL || 'postgresql://placeholder-for-build-time-only';
+
+let pool: Pool;
+let prismaClient: PrismaClient;
+
 if (process.env.NODE_ENV === 'production') {
-  prismaClient = getPrismaClient();
+  pool = new Pool({ connectionString });
+  const adapter = new PrismaPg(pool);
+  prismaClient = new PrismaClient({ adapter });
 } else {
+  if (!globalForPrisma.pool) {
+    globalForPrisma.pool = new Pool({ connectionString });
+  }
+  pool = globalForPrisma.pool;
+
   if (!globalForPrisma.prisma) {
-    globalForPrisma.prisma = getPrismaClient();
+    const adapter = new PrismaPg(pool);
+    globalForPrisma.prisma = new PrismaClient({ adapter });
   }
   prismaClient = globalForPrisma.prisma;
 }
