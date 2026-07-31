@@ -1,0 +1,282 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider        = "prisma-client-js"
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  image       String?
+  isActive    Boolean   @default(true) @map("is_active")
+  sortOrder   Int       @default(0) @map("sort_order")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  
+  products    Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id               String            @id @default(cuid())
+  categoryId       String            @map("category_id")
+  category         Category          @relation(fields: [categoryId], references: [id])
+  name             String
+  slug             String            @unique
+  shortDescription String?           @map("short_description")
+  description      String?           @db.Text
+  sku              String            @unique
+  basePrice        Decimal           @map("base_price") @db.Decimal(10, 2)
+  comparePrice     Decimal?          @map("compare_price") @db.Decimal(10, 2)
+  rating           Decimal?          @default(4.5) @map("rating") @db.Decimal(2, 1)
+  reviewCount      Int               @default(0) @map("review_count")
+  isActive         Boolean           @default(true) @map("is_active")
+  isFeatured       Boolean           @default(false) @map("is_featured")
+  sortOrder        Int               @default(0) @map("sort_order")
+  metaTitle        String?           @map("meta_title")
+  metaDescription  String?           @map("meta_description")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  images           ProductImage[]
+  videos           ProductVideo[]
+  variants         ProductVariant[]
+  materials        ProductMaterial[]
+  reviews          Review[]
+  wishlists        Wishlist[]
+
+  @@map("products")
+}
+
+model ProductImage {
+  id                 String   @id @default(cuid())
+  productId          String   @map("product_id")
+  product            Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cloudinaryPublicId String   @map("cloudinary_public_id")
+  imageUrl           String   @map("image_url")
+  altText            String?  @map("alt_text")
+  sortOrder          Int      @default(0) @map("sort_order")
+  isThumbnail        Boolean  @default(false) @map("is_thumbnail")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@map("product_images")
+}
+
+model ProductVideo {
+  id                 String   @id @default(cuid())
+  productId          String   @map("product_id")
+  product            Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cloudinaryPublicId String   @map("cloudinary_public_id")
+  videoUrl           String   @map("video_url")
+  thumbnail          String?
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@map("product_videos")
+}
+
+model ProductVariant {
+  id           String      @id @default(cuid())
+  productId    String      @map("product_id")
+  product      Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size         String
+  thickness    String
+  price        Decimal     @db.Decimal(10, 2)
+  comparePrice Decimal?    @map("compare_price") @db.Decimal(10, 2)
+  weight       Decimal?    @db.Decimal(10, 2)
+  stock        Int         @default(0)
+  sku          String      @unique
+  isActive     Boolean     @default(true) @map("is_active")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  
+  cartItems    CartItem[]
+  orderItems   OrderItem[]
+
+  @@map("product_variants")
+}
+
+model ProductMaterial {
+  id          String   @id @default(cuid())
+  productId   String   @map("product_id")
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  sortOrder   Int      @default(0) @map("sort_order")
+
+  @@map("product_materials")
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  password  String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  reviews        Review[]
+  carts          Cart[]
+  uploadedPhotos UploadedPhoto[]
+  orders         Order[]
+  wishlists      Wishlist[]
+  addresses      Address[]
+
+  @@map("customers")
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  productId  String   @map("product_id")
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  customerId String   @map("customer_id")
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  rating     Int
+  title      String?
+  review     String   @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  images     ReviewImage[]
+
+  @@map("reviews")
+}
+
+model ReviewImage {
+  id                 String @id @default(cuid())
+  reviewId           String @map("review_id")
+  review             Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  imageUrl           String @map("image_url")
+  cloudinaryPublicId String @map("cloudinary_public_id")
+
+  @@map("review_images")
+}
+
+model Cart {
+  id         String   @id @default(cuid())
+  customerId String?  @map("customer_id")
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  items      CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id              String         @id @default(cuid())
+  cartId          String         @map("cart_id")
+  cart            Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variantId       String         @map("variant_id")
+  variant         ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  quantity        Int
+  customText      String?        @map("custom_text")
+  uploadedPhotoId String?        @map("uploaded_photo_id")
+  uploadedPhoto   UploadedPhoto? @relation(fields: [uploadedPhotoId], references: [id])
+
+  @@map("cart_items")
+}
+
+model UploadedPhoto {
+  id                 String   @id @default(cuid())
+  customerId         String?  @map("customer_id")
+  customer           Customer? @relation(fields: [customerId], references: [id])
+  cloudinaryPublicId String   @map("cloudinary_public_id")
+  url                String
+  width              Int?
+  height             Int?
+  size               Int?
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  cartItems          CartItem[]
+  orderItems         OrderItem[]
+
+  @@map("uploaded_photos")
+}
+
+model Order {
+  id            String   @id @default(cuid())
+  customerId    String?  @map("customer_id")
+  customer      Customer? @relation(fields: [customerId], references: [id])
+  orderNumber   String   @unique @map("order_number")
+  subtotal      Decimal  @db.Decimal(10, 2)
+  discount      Decimal  @default(0) @db.Decimal(10, 2)
+  shipping      Decimal  @default(0) @db.Decimal(10, 2)
+  tax           Decimal  @default(0) @db.Decimal(10, 2)
+  grandTotal    Decimal  @map("grand_total") @db.Decimal(10, 2)
+  paymentStatus String   @map("payment_status")
+  orderStatus   String   @map("order_status")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  items         OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id              String         @id @default(cuid())
+  orderId         String         @map("order_id")
+  order           Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variantId       String         @map("variant_id")
+  variant         ProductVariant @relation(fields: [variantId], references: [id])
+  quantity        Int
+  price           Decimal        @db.Decimal(10, 2)
+  customText      String?        @map("custom_text")
+  uploadedPhotoId String?        @map("uploaded_photo_id")
+  uploadedPhoto   UploadedPhoto? @relation(fields: [uploadedPhotoId], references: [id])
+
+  @@map("order_items")
+}
+
+model Wishlist {
+  id         String   @id @default(cuid())
+  customerId String   @map("customer_id")
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  productId  String   @map("product_id")
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("wishlists")
+}
+
+model Coupon {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  discountType String   @map("discount_type")
+  discount     Decimal  @db.Decimal(10, 2)
+  minimumOrder Decimal  @default(0) @map("minimum_order") @db.Decimal(10, 2)
+  startDate    DateTime @map("start_date")
+  endDate      DateTime @map("end_date")
+  isActive     Boolean  @default(true) @map("is_active")
+
+  @@map("coupons")
+}
+
+model Address {
+  id           String   @id @default(cuid())
+  customerId   String   @map("customer_id")
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  fullName     String   @map("full_name")
+  phone        String
+  addressLine1 String   @map("address_line1")
+  addressLine2 String?  @map("address_line2")
+  city         String
+  state        String
+  country      String
+  postalCode   String   @map("postal_code")
+  isDefault    Boolean  @default(false) @map("is_default")
+
+  @@map("addresses")
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("admins")
+}
