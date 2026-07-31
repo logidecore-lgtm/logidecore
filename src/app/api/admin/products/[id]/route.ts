@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { db, Prisma } from '@/lib/db';
+import { db } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(
