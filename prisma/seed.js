@@ -1,10 +1,14 @@
 const { Client } = require('d:/logidecore/node_modules/pg');
 const crypto = require('crypto');
 
-const dbUrl = 'postgresql://neondb_owner:npg_qJuB0sA1EZYX@ep-curly-smoke-aufiaktb.c-10.us-east-1.aws.neon.tech/logidecore?sslmode=require';
-const cloudName = 'disdyswop';
-const apiKey = '863731374646853';
-const apiSecret = 'WJ_eAu4zv5r4sES9Z7A8banF-jM';
+const dbUrl = process.env.DATABASE_URL;
+
+if (!dbUrl) {
+  throw new Error('DATABASE_URL is required to seed the database.');
+}
+const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+const apiKey = process.env.CLOUDINARY_API_KEY;
+const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
 function hashPassword(password) {
   const jwtSecret = process.env.JWT_SECRET || 'super-secret-luxury-key-1234567890';
@@ -14,6 +18,9 @@ function hashPassword(password) {
 // Function to upload an image from a URL to Cloudinary
 async function uploadUrlToCloudinary(imageUrl, folder = 'seed') {
   try {
+    if (!cloudName || !apiKey || !apiSecret) {
+      throw new Error('Cloudinary environment variables are missing');
+    }
     const timestamp = Math.round(Date.now() / 1000).toString();
     
     // Sort parameters alphabetically: folder, then timestamp
