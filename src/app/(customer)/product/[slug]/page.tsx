@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useCart } from '@/hooks/use-cart';
 import { useWishlist } from '@/hooks/use-wishlist';
 import { compressImage } from '@/lib/image-utils';
+import FramePreview from '@/components/product/FramePreview';
+import ProductCustomizerModal from '@/components/product/ProductCustomizerModal';
 
 interface ProductImage {
   id: string;
@@ -54,15 +56,30 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState<string>('');
-  
+
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedThickness, setSelectedThickness] = useState<string>('');
-  
+
   const [quantity, setQuantity] = useState(1);
   const [customText, setCustomText] = useState('');
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [addedNotify, setAddedNotify] = useState(false);
+
+  // Customization studio states
+  const [customizerOpen, setCustomizerOpen] = useState(false);
+  const [customization, setCustomization] = useState<{
+    imageUrl: string;
+    zoom: number;
+    rotation: number;
+    flipX: boolean;
+    flipY: boolean;
+    translateX: number;
+    translateY: number;
+    frameStyle: 'gold' | 'black' | 'oak' | 'silver' | 'template';
+    matSize: 'none' | 'thin' | 'wide';
+    customText: string;
+  } | null>(null);
 
   // Zustand stores
   const { addItem } = useCart();
@@ -80,13 +97,13 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
         const images = data.images || [];
         const thumb = images.find((img: any) => img.isThumbnail)?.imageUrl || images[0]?.imageUrl || '';
         setActiveImage(thumb);
-        
+
         // Initialize size & thickness from variants
         const variants = data.variants || [];
         if (variants.length > 0) {
           const sizes = Array.from(new Set(variants.map((v: any) => v.size))) as string[];
           setSelectedSize(sizes[0] || '');
-          
+
           const thicknesses = Array.from(
             new Set(variants.filter((v: any) => v.size === sizes[0]).map((v: any) => v.thickness))
           ) as string[];
@@ -171,7 +188,33 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to upload image');
 
+      const isTemplateProduct = !!(
+        product?.category?.slug?.toLowerCase().includes('template') ||
+        product?.category?.name?.toLowerCase().includes('template') ||
+        product?.category?.slug?.toLowerCase().includes('anniversary') ||
+        product?.category?.name?.toLowerCase().includes('anniversary') ||
+        product?.category?.slug?.toLowerCase().includes('birthday') ||
+        product?.category?.name?.toLowerCase().includes('birthday') ||
+        product?.category?.slug?.toLowerCase().includes('collage') ||
+        product?.category?.name?.toLowerCase().includes('collage')
+      );
+
+      const defaultFrameStyle = isTemplateProduct ? 'template' : 'gold';
+
       setUploadedImage(data.url);
+      setCustomization({
+        imageUrl: data.url,
+        zoom: 1,
+        rotation: 0,
+        flipX: false,
+        flipY: false,
+        translateX: 0,
+        translateY: 0,
+        frameStyle: defaultFrameStyle,
+        matSize: defaultFrameStyle === 'template' ? 'none' : 'wide',
+        customText: customText,
+      });
+      setCustomizerOpen(true);
     } catch (err: any) {
       alert(err.message || 'Image upload failed');
     } finally {
@@ -182,11 +225,15 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
   const handleAddToCart = () => {
     if (!product) return;
 
+    const finalCustomText = customization
+      ? `[Frame: ${customization.frameStyle.toUpperCase()}, Mat: ${customization.matSize.toUpperCase()}]${customization.customText ? ` "${customization.customText}"` : ''}`
+      : customText;
+
     addItem({
       productId: product.id,
       productVariantId: activeVariant?.id || 'default',
       quantity,
-      customText,
+      customText: finalCustomText,
       customImageUrl: uploadedImage,
       product: {
         name: product.name,
@@ -250,8 +297,25 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
         {/* Left Side: Product Gallery */}
         <div className="space-y-6">
-          <div className="aspect-square bg-surface-container-low border border-outline-variant/30 overflow-hidden relative group rounded-sm">
-            {activeImage ? (
+          <div className="aspect-square bg-surface-container-low border border-outline-variant/30 overflow-hidden relative group rounded-sm flex items-center justify-center">
+            {activeImage === uploadedImage && customization ? (
+              <div className="w-full h-full flex items-center justify-center bg-neutral-900/5">
+                <FramePreview
+                  imageUrl={customization.imageUrl}
+                  templateUrl={product.images?.[0]?.imageUrl || ''}
+                  zoom={customization.zoom}
+                  rotation={customization.rotation}
+                  flipX={customization.flipX}
+                  flipY={customization.flipY}
+                  translateX={customization.translateX}
+                  translateY={customization.translateY}
+                  frameStyle={customization.frameStyle}
+                  matSize={customization.matSize}
+                  customText={customization.customText}
+                  isInteractive={false}
+                />
+              </div>
+            ) : activeImage ? (
               <img
                 src={activeImage}
                 alt={product.name}
@@ -274,13 +338,24 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
               <button
                 key={index}
                 onClick={() => setActiveImage(img.imageUrl)}
-                className={`aspect-square overflow-hidden border bg-surface-container-low rounded-sm transition-all ${
-                  activeImage === img.imageUrl ? 'border-primary ring-2 ring-primary/20' : 'border-outline-variant/30 hover:border-primary'
-                }`}
+                className={`aspect-square overflow-hidden border bg-surface-container-low rounded-sm transition-all ${activeImage === img.imageUrl ? 'border-primary ring-2 ring-primary/20' : 'border-outline-variant/30 hover:border-primary'
+                  }`}
               >
                 <img src={img.imageUrl} alt="thumbnail" className="w-full h-full object-cover" />
               </button>
             ))}
+            {uploadedImage && (
+              <button
+                onClick={() => setActiveImage(uploadedImage)}
+                className={`aspect-square overflow-hidden border bg-surface-container-low rounded-sm transition-all relative flex items-center justify-center ${activeImage === uploadedImage ? 'border-primary ring-2 ring-primary/20' : 'border-outline-variant/30 hover:border-primary'
+                  }`}
+              >
+                <img src={uploadedImage} alt="custom design thumbnail" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-white text-[20px]">brush</span>
+                </div>
+              </button>
+            )}
           </div>
         </div>
 
@@ -336,11 +411,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                     <button
                       key={size}
                       onClick={() => setSelectedSize(size)}
-                      className={`py-3 px-2 text-center text-xs font-sans font-bold uppercase transition-all rounded-sm border ${
-                        selectedSize === size
+                      className={`py-3 px-2 text-center text-xs font-sans font-bold uppercase transition-all rounded-sm border ${selectedSize === size
                           ? 'bg-primary text-white border-primary shadow'
                           : 'border-outline-variant/60 hover:border-primary text-primary'
-                      }`}
+                        }`}
                     >
                       {size}
                     </button>
@@ -360,11 +434,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                     <button
                       key={th}
                       onClick={() => setSelectedThickness(th)}
-                      className={`py-3 px-6 text-center text-xs font-sans font-bold uppercase transition-all rounded-sm border ${
-                        selectedThickness === th
+                      className={`py-3 px-6 text-center text-xs font-sans font-bold uppercase transition-all rounded-sm border ${selectedThickness === th
                           ? 'bg-primary text-white border-primary shadow'
                           : 'border-outline-variant/60 hover:border-primary text-primary'
-                      }`}
+                        }`}
                     >
                       {th}
                     </button>
@@ -378,38 +451,68 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
               <label className="block font-sans text-xs uppercase tracking-widest text-on-surface-variant font-bold">
                 Upload High-Res Photo
               </label>
-              <div className="border border-dashed border-outline-variant/80 p-8 rounded-sm text-center bg-surface-container-low/50 hover:bg-surface-container-low transition-colors relative cursor-pointer">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                />
+              <div
+                onClick={() => setCustomizerOpen(true)}
+                className="border border-dashed border-outline-variant/80 p-8 rounded-sm text-center bg-surface-container-low/50 hover:bg-surface-container-low transition-colors relative cursor-pointer"
+              >
                 {uploading ? (
                   <p className="text-xs text-secondary font-bold uppercase tracking-wider animate-pulse">
                     Uploading your file...
                   </p>
                 ) : uploadedImage ? (
-                  <div className="space-y-3 flex flex-col items-center justify-center relative z-10">
-                    <img 
-                      src={uploadedImage} 
-                      alt="Upload Preview" 
-                      className="h-28 w-auto object-contain border border-outline-variant/30 shadow-md"
-                    />
+                  <div className="space-y-4 flex flex-col items-center justify-center relative z-10 p-2">
+                    <div className="h-28 w-28 aspect-square relative border border-outline-variant/35 bg-neutral-900/5 rounded-sm overflow-hidden flex items-center justify-center scale-90">
+                      {customization ? (
+                        <FramePreview
+                          imageUrl={customization.imageUrl}
+                          templateUrl={product.images?.[0]?.imageUrl || ''}
+                          zoom={customization.zoom}
+                          rotation={customization.rotation}
+                          flipX={customization.flipX}
+                          flipY={customization.flipY}
+                          translateX={customization.translateX}
+                          translateY={customization.translateY}
+                          frameStyle={customization.frameStyle}
+                          matSize={customization.matSize}
+                          customText={customization.customText}
+                          isInteractive={false}
+                        />
+                      ) : (
+                        <img
+                          src={uploadedImage}
+                          alt="Upload Preview"
+                          className="h-full w-full object-cover"
+                        />
+                      )}
+                    </div>
                     <p className="text-xs text-green-600 font-bold uppercase tracking-wider">
-                      ✓ Image Uploaded Successfully
+                      ✓ Custom Design Configured
                     </p>
-                    <button 
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        setUploadedImage(null);
-                      }}
-                      className="text-red-600 hover:text-red-800 text-[10px] uppercase tracking-widest font-bold font-sans underline cursor-pointer"
-                    >
-                      Remove Photo
-                    </button>
+                    <div className="flex gap-4">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          setCustomizerOpen(true);
+                        }}
+                        className="px-4 py-2 border border-primary text-primary hover:bg-primary hover:text-white transition-all text-[10px] uppercase tracking-widest font-bold font-sans rounded-sm cursor-pointer"
+                      >
+                        Customize Frame
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          setUploadedImage(null);
+                          setCustomization(null);
+                        }}
+                        className="px-4 py-2 border border-red-200 hover:border-red-400 text-red-600 hover:text-red-700 transition-all text-[10px] uppercase tracking-widest font-bold font-sans rounded-sm cursor-pointer"
+                      >
+                        Remove Photo
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <>
@@ -417,29 +520,15 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                       cloud_upload
                     </span>
                     <p className="text-xs uppercase tracking-widest text-primary font-bold mb-1">
-                      Drop file or click to browse
+                      Try your photo in this frame
                     </p>
-                    <p className="text-[10px] text-on-surface-variant">JPG, PNG up to 20MB</p>
+                    <p className="text-[10px] text-on-surface-variant font-semibold">Try Now</p>
                   </>
                 )}
               </div>
             </div>
 
-            {/* Custom text quote */}
-            <div className="space-y-3">
-              <label className="block font-sans text-xs uppercase tracking-widest text-on-surface-variant font-bold">
-                Add Quote / Custom Text
-              </label>
-              <div className="border-b border-neutral-300 py-2 flex items-center">
-                <input
-                  value={customText}
-                  onChange={(e) => setCustomText(e.target.value)}
-                  className="bg-transparent border-none focus:ring-0 w-full placeholder:text-on-surface-variant/40 text-sm outline-none"
-                  placeholder="Type your text here..."
-                  type="text"
-                />
-              </div>
-            </div>
+
           </div>
 
           {/* Action Row */}
@@ -481,9 +570,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                   imageUrl: product.images?.[0]?.imageUrl || '',
                 })
               }
-              className={`w-[54px] h-[54px] border border-outline-variant/50 flex items-center justify-center rounded-sm hover:border-primary transition-all ${
-                isWishlisted ? 'text-red-500 border-red-500' : 'text-primary'
-              }`}
+              className={`w-[54px] h-[54px] border border-outline-variant/50 flex items-center justify-center rounded-sm hover:border-primary transition-all ${isWishlisted ? 'text-red-500 border-red-500' : 'text-primary'
+                }`}
             >
               <span className="material-symbols-outlined" style={{ fontVariationSettings: isWishlisted ? "'FILL' 1" : "'FILL' 0" }}>
                 favorite
@@ -535,8 +623,89 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
               </details>
             </div>
           )}
+
+          {/* Shipping & Delivery Information */}
+          <div className="border-t border-outline-variant/30 py-6 space-y-4">
+            <details className="group cursor-pointer">
+              <summary className="flex justify-between items-center text-xs font-sans font-bold uppercase tracking-widest text-primary outline-none">
+                Shipping & Delivery
+                <span className="material-symbols-outlined group-open:rotate-180 transition-transform">
+                  keyboard_arrow_down
+                </span>
+              </summary>
+              <div className="mt-4 space-y-3 pl-1 text-xs font-sans text-on-surface-variant leading-relaxed">
+                <p className="font-bold text-green-600 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px]">local_shipping</span>
+                  FREE Shipping all over India
+                </p>
+                <p>Typically dispatched within <strong>2-3 working days</strong> and delivered within <strong>4-6 working days</strong>.</p>
+                <p>Shipped through one of our trusted courier partners like DTDC, Delhivery, or Bluedart. Tracking details will be shared with the customer upon dispatch.</p>
+                <div className="pt-3 border-t border-outline-variant/20 text-[10px] text-on-surface-variant/75 space-y-0.5">
+                  <p><strong>Marketed & Packed by:</strong> Logidecore</p>
+                  <p>Pauni, Bhandara, Maharashtra, 441910 India</p>
+                  <p><strong>Call us at:</strong> +91-9970376791</p>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          {/* Returns & Support Information */}
+          <div className="border-t border-outline-variant/30 py-6 space-y-4">
+            <details className="group cursor-pointer">
+              <summary className="flex justify-between items-center text-xs font-sans font-bold uppercase tracking-widest text-primary outline-none">
+                Returns & Support Policy
+                <span className="material-symbols-outlined group-open:rotate-180 transition-transform">
+                  keyboard_arrow_down
+                </span>
+              </summary>
+              <div className="mt-4 space-y-3 pl-1 text-xs font-sans text-on-surface-variant leading-relaxed">
+                <p>Unhappy with what you got? Email us at <a href="mailto:support@logidecore.com" className="underline font-semibold hover:text-primary transition-colors">support@logidecore.com</a> or call us at <strong className="text-primary">+91-9970376791</strong>.</p>
+                <p>We will dedicate a Happiness Consultant to resolve your issue within <strong>24 working hours</strong>.</p>
+                <p>If you have any problem with your order, you can reach us via online chat or call <strong className="text-primary">9970376791</strong>.</p>
+              </div>
+            </details>
+          </div>
         </div>
       </div>
+
+      {/* Product Customizer Studio Modal Workspace */}
+      {customizerOpen && (() => {
+        const isTemplateProduct = !!(
+          product?.category?.slug?.toLowerCase().includes('template') ||
+          product?.category?.name?.toLowerCase().includes('template') ||
+          product?.category?.slug?.toLowerCase().includes('anniversary') ||
+          product?.category?.name?.toLowerCase().includes('anniversary') ||
+          product?.category?.slug?.toLowerCase().includes('birthday') ||
+          product?.category?.name?.toLowerCase().includes('birthday') ||
+          product?.category?.slug?.toLowerCase().includes('collage') ||
+          product?.category?.name?.toLowerCase().includes('collage')
+        );
+        const defaultFrameStyle = isTemplateProduct ? 'template' : 'gold';
+
+        return (
+          <ProductCustomizerModal
+            isOpen={customizerOpen}
+            onClose={() => setCustomizerOpen(false)}
+            imageUrl={customization?.imageUrl || uploadedImage || ''}
+            templateUrl={product.images?.[0]?.imageUrl || ''}
+            initialCustomText={customization?.customText ?? customText}
+            initialFrameStyle={customization?.frameStyle || defaultFrameStyle}
+            initialMatSize={customization?.matSize || (defaultFrameStyle === 'template' ? 'none' : 'wide')}
+            initialZoom={customization?.zoom}
+            initialRotation={customization?.rotation}
+            initialFlipX={customization?.flipX}
+            initialFlipY={customization?.flipY}
+            initialTranslateX={customization?.translateX}
+            initialTranslateY={customization?.translateY}
+            onSave={(data) => {
+              setCustomization(data);
+              setUploadedImage(data.imageUrl);
+              setCustomText(data.customText);
+              setActiveImage(data.imageUrl); // Set the active gallery view to show the custom design
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }

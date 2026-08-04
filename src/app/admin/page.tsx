@@ -67,6 +67,7 @@ export default function AdminDashboardPage() {
 
   // Form Modal States
   const [showFormModal, setShowFormModal] = useState(false);
+  const [showCategoriesModal, setShowCategoriesModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   // Form Fields
@@ -85,6 +86,85 @@ export default function AdminDashboardPage() {
   const [formImages, setFormImages] = useState<ProductImage[]>([]);
   const [formVariants, setFormVariants] = useState<ProductVariant[]>([]);
   const [formMaterials, setFormMaterials] = useState<ProductMaterial[]>([]);
+
+  // Dynamic Category Creation States
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+  const [creatingCategory, setCreatingCategory] = useState(false);
+
+  const [settingsCategoryName, setSettingsCategoryName] = useState('');
+  const [creatingSettingsCategory, setCreatingSettingsCategory] = useState(false);
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    setCreatingCategory(true);
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newCategoryName.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create category');
+
+      setCategories((prev) => [...prev, data]);
+      setFormCategoryId(data.id);
+      setNewCategoryName('');
+      setShowNewCategoryInput(false);
+    } catch (err: any) {
+      alert(err.message || 'Failed to create category');
+    } finally {
+      setCreatingCategory(false);
+    }
+  };
+
+  const handleCreateSettingsCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!settingsCategoryName.trim()) return;
+    setCreatingSettingsCategory(true);
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: settingsCategoryName.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create category');
+
+      setCategories((prev) => [...prev, data]);
+      setSettingsCategoryName('');
+      alert('Category created successfully!');
+    } catch (err: any) {
+      alert(err.message || 'Failed to create category');
+    } finally {
+      setCreatingSettingsCategory(false);
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    const hasProducts = products.some((p) => p.categoryId === id);
+    if (hasProducts) {
+      alert("Cannot delete category because it contains active products in the catalogue. Please reassign or delete the products first.");
+      return;
+    }
+
+    if (!confirm("Are you sure you want to delete this category?")) return;
+
+    try {
+      const res = await fetch(`/api/categories?id=${id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete category');
+
+      setCategories((prev) => prev.filter((c) => c.id !== id));
+      if (formCategoryId === id) {
+        setFormCategoryId(categories.filter((c) => c.id !== id)[0]?.id || '');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete category');
+    }
+  };
 
   // Temp item states for nested array adding
   const [tempVariantSize, setTempVariantSize] = useState('');
@@ -168,6 +248,8 @@ export default function AdminDashboardPage() {
     setFormVariants([]);
     setFormMaterials([]);
     setFormError('');
+    setShowNewCategoryInput(false);
+    setNewCategoryName('');
     setShowFormModal(true);
   };
 
@@ -189,6 +271,8 @@ export default function AdminDashboardPage() {
     setFormVariants(product.variants.map(v => ({ ...v })));
     setFormMaterials(product.materials.map(m => ({ ...m })));
     setFormError('');
+    setShowNewCategoryInput(false);
+    setNewCategoryName('');
     setShowFormModal(true);
   };
 
@@ -542,12 +626,21 @@ export default function AdminDashboardPage() {
                   Manage frame products, custom materials lists, variants pricing matrices, and secure Cloudinary media links.
                 </p>
               </div>
-              <button
-                onClick={handleOpenAddModal}
-                className="px-5 py-3 bg-primary text-white text-xs uppercase tracking-widest font-bold hover:bg-primary/95 transition-all rounded"
-              >
-                + Add Custom Design
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowCategoriesModal(true)}
+                  className="px-5 py-3 border border-neutral-300 dark:border-neutral-700 hover:border-primary text-neutral-600 dark:text-neutral-300 text-xs uppercase tracking-widest font-bold hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all rounded cursor-pointer"
+                >
+                  Manage Categories
+                </button>
+                <button
+                  onClick={handleOpenAddModal}
+                  className="px-5 py-3 bg-primary text-white text-xs uppercase tracking-widest font-bold hover:bg-primary/95 transition-all rounded cursor-pointer"
+                >
+                  + Add Custom Design
+                </button>
+              </div>
             </div>
 
             {/* Catalog Grid */}
@@ -627,13 +720,62 @@ export default function AdminDashboardPage() {
 
         {/* 4. Settings View placeholder */}
         {activeMenu === 'settings' && (
-          <div className="bg-white dark:bg-neutral-900 p-8 border border-neutral-200 dark:border-neutral-800 rounded font-sans space-y-6 max-w-xl">
-            <h3 className="font-serif text-xl font-bold border-b pb-4 dark:border-neutral-800">Studio Settings</h3>
-            <p className="text-xs text-neutral-400">Configure global shop parameters.</p>
-            <div className="space-y-4 text-xs">
-              <p>● DB Name: <span className="font-mono text-primary">logidecore</span></p>
-              <p>● Storage Engine: <span className="font-mono text-primary">Cloudinary disdyswop</span></p>
-              <p>● Status: Active</p>
+          <div className="flex flex-col md:flex-row gap-6 items-start max-w-5xl">
+            {/* System Info card */}
+            <div className="bg-white dark:bg-neutral-900 p-8 border border-neutral-200 dark:border-neutral-800 rounded font-sans space-y-6 flex-1 min-w-[280px]">
+              <h3 className="font-serif text-xl font-bold border-b pb-4 dark:border-neutral-800">Studio Settings</h3>
+              <p className="text-xs text-neutral-400">Configure global shop parameters.</p>
+              <div className="space-y-4 text-xs">
+                <p>● DB Name: <span className="font-mono text-primary">logidecore</span></p>
+                <p>● Storage Engine: <span className="font-mono text-primary">Cloudinary disdyswop</span></p>
+                <p>● Status: Active</p>
+              </div>
+            </div>
+
+            {/* Category Management card */}
+            <div className="bg-white dark:bg-neutral-900 p-8 border border-neutral-200 dark:border-neutral-800 rounded font-sans space-y-6 flex-1 min-w-[320px]">
+              <h3 className="font-serif text-xl font-bold border-b pb-4 dark:border-neutral-800">Category Management</h3>
+              
+              {/* Form to add a new category */}
+              <form onSubmit={handleCreateSettingsCategory} className="space-y-3">
+                <label className="block text-[10px] uppercase tracking-wider text-neutral-400 font-bold">Add New Category</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    value={settingsCategoryName}
+                    onChange={(e) => setSettingsCategoryName(e.target.value)}
+                    placeholder="e.g. Birthday Frames"
+                    className="flex-1 px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded text-xs outline-none focus:border-primary text-black dark:text-white"
+                  />
+                  <button
+                    type="submit"
+                    disabled={creatingSettingsCategory || !settingsCategoryName.trim()}
+                    className="px-4 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded disabled:opacity-50 hover:bg-primary/95 transition-all cursor-pointer"
+                  >
+                    {creatingSettingsCategory ? '...' : 'Add'}
+                  </button>
+                </div>
+              </form>
+
+              {/* Current Categories List */}
+              <div className="space-y-2">
+                <label className="block text-[10px] uppercase tracking-wider text-neutral-400 font-bold">Active Categories ({categories.length})</label>
+                <div className="max-h-[160px] overflow-y-auto border border-neutral-100 dark:border-neutral-800 rounded p-3 bg-neutral-50/50 dark:bg-neutral-950/20 divide-y divide-neutral-100 dark:divide-neutral-800">
+                  {categories.length === 0 ? (
+                    <p className="text-xs text-neutral-400 italic">No categories created yet.</p>
+                  ) : (
+                    categories.map((cat) => (
+                      <div key={cat.id} className="py-2 flex items-center justify-between text-xs">
+                        <span className="font-semibold text-neutral-800 dark:text-neutral-200">{cat.name}</span>
+                        <span className="font-mono text-[9px] text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded">
+                          slug: {cat.slug}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -703,19 +845,53 @@ export default function AdminDashboardPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] uppercase tracking-wider text-neutral-400 font-bold">Design Category</label>
-                    <select
-                      required
-                      value={formCategoryId}
-                      onChange={(e) => setFormCategoryId(e.target.value)}
-                      className="w-full px-4 py-3 bg-neutral-950 border border-neutral-800 rounded outline-none focus:border-primary transition-all text-white"
-                    >
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex justify-between items-center">
+                      <label className="block text-[10px] uppercase tracking-wider text-neutral-400 font-bold">Design Category</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowNewCategoryInput(!showNewCategoryInput);
+                          setNewCategoryName('');
+                        }}
+                        className="text-[10px] font-sans font-bold text-primary uppercase tracking-wider hover:underline cursor-pointer"
+                      >
+                        {showNewCategoryInput ? "✕ Cancel" : "＋ New Category"}
+                      </button>
+                    </div>
+                    {showNewCategoryInput ? (
+                      <div className="flex gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                        <input
+                          type="text"
+                          value={newCategoryName}
+                          onChange={(e) => setNewCategoryName(e.target.value)}
+                          placeholder="New Category Name"
+                          className="flex-1 px-4 py-3 bg-neutral-950 border border-neutral-800 rounded outline-none focus:border-primary transition-all text-white text-xs placeholder:text-neutral-600"
+                          disabled={creatingCategory}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleCreateCategory}
+                          disabled={creatingCategory || !newCategoryName.trim()}
+                          className="px-4 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded disabled:opacity-50 transition-all flex items-center justify-center min-w-[80px] cursor-pointer"
+                        >
+                          {creatingCategory ? "..." : "Create"}
+                        </button>
+                      </div>
+                    ) : (
+                      <select
+                        required
+                        value={formCategoryId}
+                        onChange={(e) => setFormCategoryId(e.target.value)}
+                        className="w-full px-4 py-3 bg-neutral-950 border border-neutral-800 rounded outline-none focus:border-primary transition-all text-white"
+                      >
+                        <option value="" disabled>Select a category</option>
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                   <div className="space-y-1.5">
                     <label className="block text-[10px] uppercase tracking-wider text-neutral-400 font-bold">Base Price (INR)</label>
@@ -1016,6 +1192,81 @@ export default function AdminDashboardPage() {
               >
                 {editingProduct ? 'Save Product Changes' : 'Publish Product Design'}
               </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {showCategoriesModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm">
+          <div className="bg-neutral-900 border border-neutral-800 text-white rounded-lg max-w-lg w-full flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200 font-sans">
+            
+            {/* Modal Header */}
+            <div className="flex justify-between items-center px-6 py-4 border-b border-neutral-800 shrink-0">
+              <h3 className="text-lg font-serif font-bold">Category Management</h3>
+              <button
+                onClick={() => {
+                  setShowCategoriesModal(false);
+                  setSettingsCategoryName('');
+                }}
+                className="text-neutral-400 hover:text-white cursor-pointer"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6 overflow-y-auto">
+              {/* Add New Category Form */}
+              <form onSubmit={handleCreateSettingsCategory} className="space-y-2">
+                <label className="block text-[10px] uppercase tracking-wider text-neutral-400 font-bold">Add New Category</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    value={settingsCategoryName}
+                    onChange={(e) => setSettingsCategoryName(e.target.value)}
+                    placeholder="e.g. Birthday Frames"
+                    className="flex-1 px-4 py-3 bg-neutral-950 border border-neutral-800 rounded text-xs outline-none focus:border-primary text-white"
+                    disabled={creatingSettingsCategory}
+                  />
+                  <button
+                    type="submit"
+                    disabled={creatingSettingsCategory || !settingsCategoryName.trim()}
+                    className="px-5 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded disabled:opacity-50 hover:bg-primary/95 transition-all cursor-pointer"
+                  >
+                    {creatingSettingsCategory ? '...' : 'Add'}
+                  </button>
+                </div>
+              </form>
+
+              {/* List of Categories */}
+              <div className="space-y-3">
+                <label className="block text-[10px] uppercase tracking-wider text-neutral-400 font-bold">Active Categories ({categories.length})</label>
+                <div className="max-h-[300px] overflow-y-auto border border-neutral-800 rounded p-4 bg-neutral-950/40 divide-y divide-neutral-800">
+                  {categories.length === 0 ? (
+                    <p className="text-xs text-neutral-400 italic">No categories created yet.</p>
+                  ) : (
+                    categories.map((cat) => (
+                      <div key={cat.id} className="py-3 flex items-center justify-between text-xs">
+                        <div className="space-y-0.5">
+                          <p className="font-semibold text-white">{cat.name}</p>
+                          <p className="font-mono text-[9px] text-neutral-500">slug: {cat.slug}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCategory(cat.id)}
+                          className="text-red-500 hover:text-red-400 transition-colors p-1.5 hover:bg-red-500/10 rounded cursor-pointer"
+                          title="Delete Category"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
 
           </div>
