@@ -5,19 +5,19 @@ import Link from 'next/link';
 
 const HERO_SLIDES = [
   {
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAKSbnHsi57BAR4LZVQtzvDZnlb2-XSRqAxaURxjqv5jqKwTqYjoHW_BMl-mXHNZvav8w0Jj6NPMESVt1OLzJuLxY4f7DckQfOnGPWLEunEldcIHQ_s-btg8X0ZUZE0SlEHtJh_Avly45LddXbpoRxICDTYAYebMXQpC3FF8G4ibXBRMfbDPl1vW6tiZ0AGBIil26qrqP9HSQpvf9Hzea2c20bI_k7AFzYxlW5f6s3OqjGsfY-MkZDl9NP9HrLiazsnaiTJppVb4XET',
+    image: '/background-1.png',
     title: 'Timeless Elegance for Modern Spaces',
     subtitle: 'The Signature Collection',
     ctaLink: '/category/acrylic-photo-frames',
   },
   {
-    image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=1200',
+    image: '/backhround-2.png',
     title: 'Precision Personalization',
     subtitle: 'God Acrylic Photo Mounts',
     ctaLink: '/category/acrylic-photo-frames',
   },
   {
-    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=1200',
+    image: '/background-3.png',
     title: 'Elevate Your Interior Vision',
     subtitle: 'Acrylic Logo & Plates',
     ctaLink: '/category/house-name-plates',
