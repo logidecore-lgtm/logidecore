@@ -30,9 +30,9 @@ export default function BlogsPage() {
         </h1>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-16 font-sans">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8 font-sans">
         {MOCK_BLOGS.map((blog) => (
-          <article key={blog.slug} className="group space-y-6">
+          <article key={blog.slug} className="group space-y-3 md:space-y-6">
             <Link href={`/blogs/${blog.slug}`} className="block">
               <div className="aspect-[16/10] overflow-hidden bg-surface-container-low border border-outline-variant/20 rounded-sm">
                 <img
@@ -43,19 +43,19 @@ export default function BlogsPage() {
               </div>
             </Link>
             
-            <div className="space-y-3">
-              <span className="text-[10px] uppercase tracking-widest text-secondary font-bold">
+            <div className="space-y-1.5 md:space-y-3">
+              <span className="text-[9px] md:text-[10px] uppercase tracking-widest text-secondary font-bold">
                 {blog.date} • Bespoke Design
               </span>
-              <h3 className="font-serif text-2xl font-bold text-primary group-hover:text-secondary transition-colors">
+              <h3 className="font-serif text-base md:text-2xl font-bold text-primary group-hover:text-secondary transition-colors leading-snug line-clamp-2">
                 <Link href={`/blogs/${blog.slug}`}>{blog.title}</Link>
               </h3>
-              <p className="text-sm text-on-surface-variant leading-relaxed">
+              <p className="text-xs md:text-sm text-on-surface-variant leading-relaxed line-clamp-2">
                 {blog.summary}
               </p>
               <Link
                 href={`/blogs/${blog.slug}`}
-                className="inline-block text-xs font-bold uppercase tracking-widest text-primary hover:text-secondary transition-colors underline pt-2"
+                className="inline-block text-[10px] md:text-xs font-bold uppercase tracking-widest text-primary hover:text-secondary transition-colors underline pt-1 md:pt-2"
               >
                 Read Article
               </Link>

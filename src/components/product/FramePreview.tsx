@@ -148,14 +148,22 @@ export default function FramePreview({
           style={{ cursor: isInteractive ? 'grab' : 'default' }}
         >
           {/* User's Photo Layer (Placed underneath template) */}
-          <div className="absolute inset-0 overflow-hidden bg-neutral-100 pointer-events-none select-none">
-            <img
-              src={imageUrl}
-              alt="Customized Preview"
-              className="absolute w-full h-full object-cover"
-              style={transformStyle}
-              draggable={false}
-            />
+          <div className="absolute inset-0 overflow-hidden bg-neutral-100 dark:bg-neutral-900 pointer-events-none select-none">
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt="Customized Preview"
+                className="absolute w-full h-full object-cover"
+                style={transformStyle}
+                draggable={false}
+              />
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-100 dark:bg-neutral-900">
+                <span className="bg-neutral-900/80 text-white font-sans text-[11px] font-bold uppercase tracking-widest px-4 py-2 rounded shadow-md pointer-events-none">
+                  Tap to upload
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Template Overlay (Placed on top of photo) */}
@@ -186,7 +194,7 @@ export default function FramePreview({
           
           {/* Inner Image Mask/Container */}
           <div 
-            className={`w-full h-full relative overflow-hidden bg-neutral-100 ${
+            className={`w-full h-full relative overflow-hidden bg-neutral-100 dark:bg-neutral-900 ${
               isInteractive ? 'cursor-grab active:cursor-grabbing' : ''
             }`}
             style={{ 
@@ -198,13 +206,21 @@ export default function FramePreview({
             onPointerLeave={handlePointerUp}
           >
             {/* The Actual Image */}
-            <img
-              src={imageUrl}
-              alt="Customized Preview"
-              className="absolute w-full h-full object-contain pointer-events-none select-none"
-              style={transformStyle}
-              draggable={false}
-            />
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt="Customized Preview"
+                className="absolute w-full h-full object-contain pointer-events-none select-none"
+                style={transformStyle}
+                draggable={false}
+              />
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-100 dark:bg-neutral-900">
+                <span className="bg-neutral-900/80 text-white font-sans text-[11px] font-bold uppercase tracking-widest px-4 py-2 rounded shadow-md pointer-events-none">
+                  Tap to upload
+                </span>
+              </div>
+            )}
 
             {/* Subtle inner reflection or glass shadow effect */}
             <div className="absolute inset-0 pointer-events-none bg-gradient-to-tr from-transparent via-white/5 to-white/10" />

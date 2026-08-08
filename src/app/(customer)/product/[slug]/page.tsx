@@ -8,6 +8,7 @@ import { compressImage } from '@/lib/image-utils';
 import FramePreview from '@/components/product/FramePreview';
 import ProductCustomizerModal from '@/components/product/ProductCustomizerModal';
 import CustomerReviewsCarousel from '@/components/product/CustomerReviewsCarousel';
+import TrustBadgesSection from '@/components/common/TrustBadgesSection';
 
 interface ProductImage {
   id: string;
@@ -763,6 +764,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
 
       {/* Customer Reviews Section */}
       <CustomerReviewsCarousel categoryId={product.categoryId} categorySlug={product.category?.slug} />
+      <TrustBadgesSection />
     </div>
   );
 }
