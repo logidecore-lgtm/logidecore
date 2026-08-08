@@ -54,7 +54,7 @@ export default function HomePage() {
   return (
     <div className="bg-background">
       {/* Hero Carousel Section */}
-      <section className="relative h-[70vh] overflow-hidden bg-black px-4 md:px-20 py-8">
+      <section className="relative h-[50vh] sm:h-[70vh] overflow-hidden bg-black py-0">
         <div className="absolute inset-0 flex">
           {HERO_SLIDES.map((slide, index) => (
             <div
@@ -63,31 +63,19 @@ export default function HomePage() {
                 index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
               }`}
             >
-              <img
-                alt={slide.title}
-                className="w-full h-full object-cover opacity-70"
-                src={slide.image}
-              />
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-                <span className="font-sans text-xs uppercase tracking-[0.3em] mb-4 text-secondary font-bold">
-                  {slide.subtitle}
-                </span>
-                <h1 className="font-serif text-3xl md:text-6xl text-white mb-8 max-w-4xl leading-tight">
-                  {slide.title}
-                </h1>
-                <Link
-                  href={slide.ctaLink}
-                  className="px-12 py-5 bg-secondary text-white font-sans text-xs uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300 font-bold"
-                >
-                  Shop Collection
-                </Link>
-              </div>
+              <Link href={slide.ctaLink} className="absolute inset-0 block w-full h-full cursor-pointer">
+                <img
+                  alt={slide.title}
+                  className="w-full h-full object-cover object-top opacity-100"
+                  src={slide.image}
+                />
+              </Link>
             </div>
           ))}
         </div>
         
         {/* Carousel Controls */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex space-x-4 z-20">
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex space-x-4 z-20">
           {HERO_SLIDES.map((_, index) => (
             <button
               key={index}
@@ -99,6 +87,53 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+
+      {/* Floating Features Bar */}
+      <div className="relative -mt-10 sm:-mt-14 z-30 max-w-6xl mx-auto px-4">
+        <div className="bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 rounded-3xl md:rounded-full shadow-xl py-6 px-8 grid grid-cols-2 md:grid-cols-5 gap-6 text-center divide-x-0 md:divide-x divide-neutral-200/60 dark:divide-neutral-800 font-sans">
+          
+          {/* 1. PREMIUM ACRYLIC */}
+          <div className="flex flex-col items-center justify-center space-y-2.5 px-2">
+            <span className="material-symbols-outlined text-[32px] text-amber-600 dark:text-amber-500">diamond</span>
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-neutral-800 dark:text-neutral-200 leading-tight">
+              Premium Acrylic
+            </span>
+          </div>
+
+          {/* 2. DURABLE & LONG LASTING */}
+          <div className="flex flex-col items-center justify-center space-y-2.5 px-2">
+            <span className="material-symbols-outlined text-[32px] text-amber-600 dark:text-amber-500">gpp_good</span>
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-neutral-800 dark:text-neutral-200 leading-tight">
+              Durable & Long Lasting
+            </span>
+          </div>
+
+          {/* 3. CRYSTAL CLEAR DISPLAY */}
+          <div className="flex flex-col items-center justify-center space-y-2.5 px-2">
+            <span className="material-symbols-outlined text-[32px] text-amber-600 dark:text-amber-500">image</span>
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-neutral-800 dark:text-neutral-200 leading-tight">
+              Crystal Clear Display
+            </span>
+          </div>
+
+          {/* 4. PERFECT GIFT */}
+          <div className="flex flex-col items-center justify-center space-y-2.5 px-2">
+            <span className="material-symbols-outlined text-[32px] text-amber-600 dark:text-amber-500">redeem</span>
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-neutral-800 dark:text-neutral-200 leading-tight">
+              Perfect Gift
+            </span>
+          </div>
+
+          {/* 5. EASY TO MOUNT */}
+          <div className="flex flex-col items-center justify-center space-y-2.5 px-2">
+            <span className="material-symbols-outlined text-[32px] text-amber-600 dark:text-amber-500">workspace_premium</span>
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-neutral-800 dark:text-neutral-200 leading-tight">
+              Easy To Mount
+            </span>
+          </div>
+
+        </div>
+      </div>
 
       {/* Trending Header */}
       <section className="py-12 bg-white text-center">
