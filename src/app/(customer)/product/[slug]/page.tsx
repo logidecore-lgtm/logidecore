@@ -7,6 +7,7 @@ import { useWishlist } from '@/hooks/use-wishlist';
 import { compressImage } from '@/lib/image-utils';
 import FramePreview from '@/components/product/FramePreview';
 import ProductCustomizerModal from '@/components/product/ProductCustomizerModal';
+import CustomerReviewsCarousel from '@/components/product/CustomerReviewsCarousel';
 
 interface ProductImage {
   id: string;
@@ -31,6 +32,7 @@ interface ProductMaterial {
 
 interface Product {
   id: string;
+  categoryId?: string;
   name: string;
   slug: string;
   sku: string;
@@ -44,6 +46,7 @@ interface Product {
   variants: ProductVariant[];
   materials: ProductMaterial[];
   category?: {
+    id: string;
     name: string;
     slug: string;
   };
@@ -706,6 +709,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
           />
         );
       })()}
+
+      {/* Customer Reviews Section */}
+      <CustomerReviewsCarousel categoryId={product.categoryId} categorySlug={product.category?.slug} />
     </div>
   );
 }

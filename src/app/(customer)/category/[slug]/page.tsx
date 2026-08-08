@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, use, useEffect } from 'react';
 import Link from 'next/link';
+import CustomerReviewsCarousel from '@/components/product/CustomerReviewsCarousel';
 
 interface Product {
   id: string;
@@ -237,6 +238,9 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
           </div>
         )}
       </section>
+
+      {/* Customer Reviews Section */}
+      <CustomerReviewsCarousel categorySlug={slug} />
     </div>
   );
 }

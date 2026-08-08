@@ -17,7 +17,8 @@ model Category {
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
   
-  products    Product[]
+  products          Product[]
+  reviewScreenshots ReviewScreenshot[]
 
   @@map("categories")
 }
@@ -278,4 +279,15 @@ model Admin {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("admins")
+}
+
+model ReviewScreenshot {
+  id                 String    @id @default(cuid())
+  imageUrl           String    @map("image_url")
+  cloudinaryPublicId String    @map("cloudinary_public_id")
+  categoryId         String?   @map("category_id")
+  category           Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  @@map("review_screenshots")
 }

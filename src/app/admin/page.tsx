@@ -56,7 +56,7 @@ interface Product {
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const [activeMenu, setActiveMenu] = useState<'dashboard' | 'products' | 'orders' | 'settings'>('dashboard');
+  const [activeMenu, setActiveMenu] = useState<'dashboard' | 'products' | 'orders' | 'reviews' | 'settings'>('dashboard');
   const [darkMode, setDarkMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -64,6 +64,9 @@ export default function AdminDashboardPage() {
   // Database States
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [reviewScreenshots, setReviewScreenshots] = useState<any[]>([]);
+  const [uploadingReview, setUploadingReview] = useState(false);
+  const [reviewCategoryId, setReviewCategoryId] = useState('');
 
   // Form Modal States
   const [showFormModal, setShowFormModal] = useState(false);
@@ -166,6 +169,63 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleReviewUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingReview(true);
+    try {
+      const compressed = await compressImage(file);
+      const formData = new FormData();
+      formData.append('file', compressed);
+      formData.append('folder', 'reviews');
+
+      const uploadRes = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) throw new Error(uploadData.error || 'Failed to upload image to Cloudinary');
+
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageUrl: uploadData.url,
+          cloudinaryPublicId: uploadData.publicId,
+          categoryId: reviewCategoryId || null,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save review screenshot');
+
+      setReviewScreenshots((prev) => [data, ...prev]);
+      alert('Review screenshot uploaded and saved successfully!');
+    } catch (err: any) {
+      alert(err.message || 'Review upload failed');
+    } finally {
+      setUploadingReview(false);
+    }
+  };
+
+  const handleDeleteReview = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this review screenshot?')) return;
+
+    try {
+      const res = await fetch(`/api/reviews?id=${id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete review screenshot');
+
+      setReviewScreenshots((prev) => prev.filter((r) => r.id !== id));
+    } catch (err: any) {
+      alert(err.message || 'Delete failed');
+    }
+  };
+
   // Temp item states for nested array adding
   const [tempVariantSize, setTempVariantSize] = useState('');
   const [tempVariantThickness, setTempVariantThickness] = useState('');
@@ -206,6 +266,15 @@ export default function AdminDashboardPage() {
         setCategories(cats);
       } else {
         throw new Error(cats.error || 'Failed to retrieve categories list.');
+      }
+
+      // Fetch Reviews
+      const reviewRes = await fetch('/api/reviews');
+      const reviews = await reviewRes.json();
+      if (Array.isArray(reviews)) {
+        setReviewScreenshots(reviews);
+      } else {
+        throw new Error(reviews.error || 'Failed to retrieve review screenshots list.');
       }
 
       setLoading(false);
@@ -492,6 +561,15 @@ export default function AdminDashboardPage() {
               Studio Orders
             </button>
             <button
+              onClick={() => setActiveMenu('reviews')}
+              className={`w-full text-left py-3.5 px-4 rounded-sm flex items-center gap-3 transition-colors ${
+                activeMenu === 'reviews' ? 'bg-primary text-white' : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">rate_review</span>
+              Customer Reviews
+            </button>
+            <button
               onClick={() => setActiveMenu('settings')}
               className={`w-full text-left py-3.5 px-4 rounded-sm flex items-center gap-3 transition-colors ${
                 activeMenu === 'settings' ? 'bg-primary text-white' : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'
@@ -541,6 +619,7 @@ export default function AdminDashboardPage() {
               {activeMenu === 'dashboard' && 'Studio Analytics & Operations'}
               {activeMenu === 'products' && 'Product Catalogue Management'}
               {activeMenu === 'orders' && 'Studio Custom Art Orders'}
+              {activeMenu === 'reviews' && 'Customer Reviews Panel'}
               {activeMenu === 'settings' && 'Studio Settings Panel'}
             </h1>
           </div>
@@ -779,37 +858,136 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         )}
+
+        {/* 5. Reviews View */}
+        {activeMenu === 'reviews' && (
+          <div className="space-y-8 animate-in fade-in duration-200">
+            {/* Header info */}
+            <div className="bg-white dark:bg-neutral-900 p-6 border border-neutral-200 dark:border-neutral-800 rounded">
+              <h3 className="font-serif text-lg font-bold mb-1">Upload Customer Chat Feedback</h3>
+              <p className="text-xs text-neutral-400">
+                Upload WhatsApp chat reviews or social proof screenshots. These screenshots render as carousels on the product details and category landing pages.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+              {/* Left Column: Upload Box */}
+              <div className="bg-white dark:bg-neutral-900 p-6 border border-neutral-200 dark:border-neutral-800 rounded space-y-4 font-sans">
+                <h4 className="font-serif text-sm font-bold border-b pb-2 dark:border-neutral-800">Add New Review Screenshot</h4>
+                
+                {/* Category Selection */}
+                <div className="space-y-1.5 text-xs">
+                  <label className="block text-[10px] uppercase font-bold text-neutral-500">Associate Category (Optional)</label>
+                  <select
+                    value={reviewCategoryId}
+                    onChange={(e) => setReviewCategoryId(e.target.value)}
+                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded text-neutral-800 dark:text-white outline-none"
+                  >
+                    <option value="">Global (All categories/pages)</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-neutral-400 mt-1">
+                    If associated with a category, this review will specifically show on pages under that category. Leave as global to show universally.
+                  </p>
+                </div>
+
+                {/* File Dropzone */}
+                <div className="border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded p-6 bg-neutral-50 dark:bg-neutral-950/40 relative cursor-pointer flex items-center justify-center min-h-[140px]">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleReviewUpload}
+                    disabled={uploadingReview}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                  />
+                  {uploadingReview ? (
+                    <div className="text-center space-y-2">
+                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto"></div>
+                      <p className="text-xs text-primary font-bold animate-pulse">Uploading Image...</p>
+                    </div>
+                  ) : (
+                    <div className="text-center space-y-2">
+                      <span className="material-symbols-outlined text-[32px] text-neutral-400">cloud_upload</span>
+                      <p className="text-xs text-neutral-500">Click or Drag Review Image here</p>
+                      <p className="text-[9px] text-neutral-400">PNG, JPG up to 10MB</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Column (Span 2): Active Reviews List */}
+              <div className="bg-white dark:bg-neutral-900 p-6 border border-neutral-200 dark:border-neutral-800 rounded space-y-4 lg:col-span-2 font-sans">
+                <h4 className="font-serif text-sm font-bold border-b pb-2 dark:border-neutral-800">
+                  Active Review Screenshots ({reviewScreenshots.length})
+                </h4>
+
+                {reviewScreenshots.length === 0 ? (
+                  <div className="text-center py-16 text-neutral-400 text-xs italic">
+                    No review screenshots uploaded yet. Use the upload panel to populate social proof.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-[500px] overflow-y-auto pr-2">
+                    {reviewScreenshots.map((rev) => (
+                      <div key={rev.id} className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 p-2 rounded relative group">
+                        <div className="aspect-[3/4] overflow-hidden bg-neutral-100 dark:bg-neutral-900 rounded mb-2 flex items-center justify-center relative">
+                          <img src={rev.imageUrl} alt="review" className="object-cover h-full w-full" />
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteReview(rev.id)}
+                            className="absolute top-2 right-2 bg-red-600 text-white p-1.5 rounded-full hover:bg-red-700 transition-colors shadow opacity-0 group-hover:opacity-100 duration-200 flex items-center justify-center cursor-pointer"
+                            title="Delete Review"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">delete</span>
+                          </button>
+                        </div>
+                        <div className="text-[9px] text-neutral-400 font-mono truncate px-1 flex flex-col gap-0.5">
+                          <span className="font-bold text-neutral-700 dark:text-neutral-300">
+                            {rev.category ? `Category: ${rev.category.name}` : 'Global Review'}
+                          </span>
+                          <span>Uploaded: {new Date(rev.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* 7. Fullscreen Add/Edit Product Form Modal */}
       {showFormModal && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm">
-          <div className="bg-neutral-900 border border-neutral-800 text-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
             
             {/* Modal Header */}
-            <div className="flex justify-between items-center px-8 py-5 border-b border-neutral-800 shrink-0">
-              <h3 className="text-xl font-serif font-bold">
+            <div className="flex justify-between items-center px-8 py-5 border-b border-neutral-200 dark:border-neutral-800 shrink-0">
+              <h3 className="text-xl font-serif font-bold text-neutral-800 dark:text-white">
                 {editingProduct ? `Edit ${editingProduct.name}` : 'Create New Product Design'}
               </h3>
               <button
+                type="button"
                 onClick={() => setShowFormModal(false)}
-                className="text-neutral-400 hover:text-white"
+                className="text-neutral-400 hover:text-neutral-600 dark:hover:text-white cursor-pointer"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
             {/* Modal Body (Scrollable form) */}
-            <form onSubmit={handleSaveProduct} className="flex-grow overflow-y-auto p-8 space-y-8 text-xs">
+            <form onSubmit={handleSaveProduct} className="flex-grow overflow-y-auto p-8 space-y-8 text-xs text-neutral-800 dark:text-white">
               {formError && (
-                <div className="p-4 bg-red-950/40 border border-red-800/60 rounded text-red-400 font-bold">
+                <div className="p-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 rounded text-red-600 dark:text-red-400 font-bold">
                   {formError}
                 </div>
               )}
 
               {/* SECTION 1: Basic Info */}
               <div className="space-y-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-secondary border-b border-neutral-800 pb-2">1. Basic Details</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-secondary border-b border-neutral-200 dark:border-neutral-800 pb-2">1. Basic Details</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-1.5">
                     <label className="block text-[10px] uppercase tracking-wider text-neutral-400 font-bold">Product Name</label>
@@ -819,34 +997,34 @@ export default function AdminDashboardPage() {
                       value={formName}
                       onChange={(e) => setFormName(e.target.value)}
                       placeholder="e.g. Acrylic Portrait Photo Print"
-                      className="w-full px-4 py-3 bg-neutral-950 border border-neutral-800 rounded outline-none focus:border-primary transition-all placeholder:text-neutral-600"
+                      className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary transition-all text-neutral-800 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] uppercase tracking-wider text-neutral-400 font-bold">Product Slug</label>
+                    <label className="block text-[10px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400 font-bold">Product Slug</label>
                     <input
                       required
                       type="text"
                       value={formSlug}
                       onChange={(e) => setFormSlug(e.target.value)}
                       placeholder="e.g. acrylic-portrait-photo-print"
-                      className="w-full px-4 py-3 bg-neutral-950 border border-neutral-800 rounded outline-none focus:border-primary transition-all placeholder:text-neutral-600"
+                      className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary transition-all text-neutral-800 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] uppercase tracking-wider text-neutral-400 font-bold">SKU Reference</label>
+                    <label className="block text-[10px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400 font-bold">SKU Reference</label>
                     <input
                       required
                       type="text"
                       value={formSku}
                       onChange={(e) => setFormSku(e.target.value)}
                       placeholder="e.g. ACRY-PORT-01"
-                      className="w-full px-4 py-3 bg-neutral-950 border border-neutral-800 rounded outline-none focus:border-primary transition-all placeholder:text-neutral-600"
+                      className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary transition-all text-neutral-800 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                     />
                   </div>
                   <div className="space-y-1.5">
                     <div className="flex justify-between items-center">
-                      <label className="block text-[10px] uppercase tracking-wider text-neutral-400 font-bold">Design Category</label>
+                      <label className="block text-[10px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400 font-bold">Design Category</label>
                       <button
                         type="button"
                         onClick={() => {
@@ -865,7 +1043,7 @@ export default function AdminDashboardPage() {
                           value={newCategoryName}
                           onChange={(e) => setNewCategoryName(e.target.value)}
                           placeholder="New Category Name"
-                          className="flex-1 px-4 py-3 bg-neutral-950 border border-neutral-800 rounded outline-none focus:border-primary transition-all text-white text-xs placeholder:text-neutral-600"
+                          className="flex-1 px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary transition-all text-neutral-800 dark:text-white text-xs placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                           disabled={creatingCategory}
                         />
                         <button
@@ -882,7 +1060,7 @@ export default function AdminDashboardPage() {
                         required
                         value={formCategoryId}
                         onChange={(e) => setFormCategoryId(e.target.value)}
-                        className="w-full px-4 py-3 bg-neutral-950 border border-neutral-800 rounded outline-none focus:border-primary transition-all text-white"
+                        className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary transition-all text-neutral-800 dark:text-white"
                       >
                         <option value="" disabled>Select a category</option>
                         {categories.map((c) => (
@@ -894,45 +1072,45 @@ export default function AdminDashboardPage() {
                     )}
                   </div>
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] uppercase tracking-wider text-neutral-400 font-bold">Base Price (INR)</label>
+                    <label className="block text-[10px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400 font-bold">Base Price (INR)</label>
                     <input
                       required
                       type="number"
                       value={formBasePrice}
                       onChange={(e) => setFormBasePrice(e.target.value)}
                       placeholder="599"
-                      className="w-full px-4 py-3 bg-neutral-950 border border-neutral-800 rounded outline-none focus:border-primary transition-all placeholder:text-neutral-600"
+                      className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary transition-all text-neutral-800 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] uppercase tracking-wider text-neutral-400 font-bold">Compare Price (INR)</label>
+                    <label className="block text-[10px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400 font-bold">Compare Price (INR)</label>
                     <input
                       type="number"
                       value={formComparePrice}
                       onChange={(e) => setFormComparePrice(e.target.value)}
                       placeholder="1199"
-                      className="w-full px-4 py-3 bg-neutral-950 border border-neutral-800 rounded outline-none focus:border-primary transition-all placeholder:text-neutral-600"
+                      className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary transition-all text-neutral-800 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                     />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="block text-[10px] uppercase tracking-wider text-neutral-400 font-bold">Short Description</label>
+                  <label className="block text-[10px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400 font-bold">Short Description</label>
                   <input
                     type="text"
                     value={formShortDescription}
                     onChange={(e) => setFormShortDescription(e.target.value)}
                     placeholder="Short summary displayed in lists"
-                    className="w-full px-4 py-3 bg-neutral-950 border border-neutral-800 rounded outline-none focus:border-primary transition-all placeholder:text-neutral-600"
+                    className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary transition-all text-neutral-800 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="block text-[10px] uppercase tracking-wider text-neutral-400 font-bold">Full Detailed Description</label>
+                  <label className="block text-[10px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400 font-bold">Full Detailed Description</label>
                   <textarea
                     rows={4}
                     value={formDescription}
                     onChange={(e) => setFormDescription(e.target.value)}
                     placeholder="Provide materials, printing type, backing details..."
-                    className="w-full px-4 py-3 bg-neutral-950 border border-neutral-800 rounded outline-none focus:border-primary transition-all placeholder:text-neutral-600"
+                    className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary transition-all text-neutral-800 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                   ></textarea>
                 </div>
                 <div className="flex gap-8">
@@ -959,9 +1137,9 @@ export default function AdminDashboardPage() {
 
               {/* SECTION 2: Image Uploads */}
               <div className="space-y-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-secondary border-b border-neutral-800 pb-2">2. Image Gallery</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-secondary border-b border-neutral-200 dark:border-neutral-800 pb-2">2. Image Gallery</h4>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-center border-2 border-dashed border-neutral-800 rounded-lg p-6 bg-neutral-950/40 relative">
+                  <div className="flex items-center justify-center border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-lg p-6 bg-neutral-50 dark:bg-neutral-950/40 relative">
                     <input
                       type="file"
                       accept="image/*"
@@ -970,8 +1148,8 @@ export default function AdminDashboardPage() {
                       className="absolute inset-0 opacity-0 cursor-pointer"
                     />
                     <div className="text-center space-y-2">
-                      <span className="material-symbols-outlined text-[36px] text-neutral-500">cloud_upload</span>
-                      <p className="text-neutral-400">
+                      <span className="material-symbols-outlined text-[36px] text-neutral-400 dark:text-neutral-500">cloud_upload</span>
+                      <p className="text-neutral-500 dark:text-neutral-400">
                         {uploadingImage ? 'Uploading image to Cloudinary...' : 'Click or Drag images here to upload directly to Cloudinary'}
                       </p>
                     </div>
@@ -980,8 +1158,8 @@ export default function AdminDashboardPage() {
                   {/* Previews */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {formImages.map((img, idx) => (
-                      <div key={idx} className="bg-neutral-950 border border-neutral-800 p-2.5 rounded relative group">
-                        <div className="h-28 overflow-hidden bg-neutral-900 rounded mb-2 flex items-center justify-center">
+                      <div key={idx} className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 p-2.5 rounded relative group">
+                        <div className="h-28 overflow-hidden bg-neutral-100 dark:bg-neutral-900 rounded mb-2 flex items-center justify-center">
                           <img src={img.imageUrl} alt="preview" className="object-cover h-full w-full" />
                         </div>
                         <div className="flex justify-between items-center">
@@ -999,7 +1177,7 @@ export default function AdminDashboardPage() {
                               }}
                               className="accent-primary"
                             />
-                            <span className="text-[10px] text-neutral-400">Thumbnail</span>
+                            <span className="text-[10px] text-neutral-500 dark:text-neutral-400">Thumbnail</span>
                           </label>
                           <button
                             type="button"
@@ -1017,14 +1195,14 @@ export default function AdminDashboardPage() {
 
               {/* SECTION 3: Product Variants */}
               <div className="space-y-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-secondary border-b border-neutral-800 pb-2">3. Product Pricing Matrix (Variants)</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-secondary border-b border-neutral-200 dark:border-neutral-800 pb-2">3. Product Pricing Matrix (Variants)</h4>
                 
                 {/* Current Variants list */}
                 {formVariants.length > 0 && (
-                  <div className="overflow-x-auto border border-neutral-800 rounded bg-neutral-950/40">
+                  <div className="overflow-x-auto border border-neutral-200 dark:border-neutral-800 rounded bg-neutral-50 dark:bg-neutral-950/40">
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="border-b border-neutral-800 bg-neutral-950 font-bold uppercase text-[9px] tracking-wider text-neutral-400">
+                        <tr className="border-b border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-950 font-bold uppercase text-[9px] tracking-wider text-neutral-500 dark:text-neutral-400">
                           <th className="p-3">Size</th>
                           <th className="p-3">Thickness</th>
                           <th className="p-3">Price</th>
@@ -1035,11 +1213,11 @@ export default function AdminDashboardPage() {
                       </thead>
                       <tbody>
                         {formVariants.map((v, idx) => (
-                          <tr key={idx} className="border-b border-neutral-800">
+                          <tr key={idx} className="border-b border-neutral-200 dark:border-neutral-800">
                             <td className="p-3 font-semibold">{v.size}</td>
                             <td className="p-3">{v.thickness}</td>
                             <td className="p-3 font-mono">Rs. {v.price}</td>
-                            <td className="p-3 font-mono text-neutral-500">Rs. {v.comparePrice || '-'}</td>
+                            <td className="p-3 font-mono text-neutral-400 dark:text-neutral-500">Rs. {v.comparePrice || '-'}</td>
                             <td className="p-3 font-mono">{v.sku}</td>
                             <td className="p-3 text-right">
                               <button
@@ -1058,61 +1236,61 @@ export default function AdminDashboardPage() {
                 )}
 
                 {/* Add Variant Form */}
-                <div className="bg-neutral-950/80 p-5 border border-neutral-800 rounded grid grid-cols-2 md:grid-cols-6 gap-4 items-end">
+                <div className="bg-neutral-50 dark:bg-neutral-950/80 p-5 border border-neutral-200 dark:border-neutral-800 rounded grid grid-cols-2 md:grid-cols-6 gap-4 items-end">
                   <div className="space-y-1.5 col-span-2 md:col-span-1">
-                    <label className="text-[10px] text-neutral-400 uppercase font-bold">Size</label>
+                    <label className="text-[10px] text-neutral-500 dark:text-neutral-400 uppercase font-bold">Size</label>
                     <input
                       type="text"
                       placeholder="e.g. 8x12"
                       value={tempVariantSize}
                       onChange={(e) => setTempVariantSize(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded outline-none focus:border-primary placeholder:text-neutral-600"
+                      className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary text-neutral-800 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] text-neutral-400 uppercase font-bold">Thickness</label>
+                    <label className="text-[10px] text-neutral-500 dark:text-neutral-400 uppercase font-bold">Thickness</label>
                     <input
                       type="text"
                       placeholder="e.g. 3mm"
                       value={tempVariantThickness}
                       onChange={(e) => setTempVariantThickness(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded outline-none focus:border-primary placeholder:text-neutral-600"
+                      className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary text-neutral-800 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] text-neutral-400 uppercase font-bold">Price (INR)</label>
+                    <label className="text-[10px] text-neutral-500 dark:text-neutral-400 uppercase font-bold">Price (INR)</label>
                     <input
                       type="number"
                       placeholder="599"
                       value={tempVariantPrice}
                       onChange={(e) => setTempVariantPrice(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded outline-none focus:border-primary placeholder:text-neutral-600"
+                      className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary text-neutral-800 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] text-neutral-400 uppercase font-bold">Compare Price</label>
+                    <label className="text-[10px] text-neutral-500 dark:text-neutral-400 uppercase font-bold">Compare Price</label>
                     <input
                       type="number"
                       placeholder="1199"
                       value={tempVariantComparePrice}
                       onChange={(e) => setTempVariantComparePrice(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded outline-none focus:border-primary placeholder:text-neutral-600"
+                      className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary text-neutral-800 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] text-neutral-400 uppercase font-bold">Variant SKU</label>
+                    <label className="text-[10px] text-neutral-500 dark:text-neutral-400 uppercase font-bold">Variant SKU</label>
                     <input
                       type="text"
                       placeholder="SKU-812-3"
                       value={tempVariantSku}
                       onChange={(e) => setTempVariantSku(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded outline-none focus:border-primary placeholder:text-neutral-600"
+                      className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary text-neutral-800 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                     />
                   </div>
                   <button
                     type="button"
                     onClick={addVariant}
-                    className="w-full py-2 bg-secondary text-white font-bold uppercase tracking-widest hover:bg-secondary/95 transition-all rounded text-[10px]"
+                    className="w-full py-2 bg-secondary text-white font-bold uppercase tracking-widest hover:bg-secondary/95 transition-all rounded text-[10px] cursor-pointer"
                   >
                     + Variant
                   </button>
@@ -1121,16 +1299,16 @@ export default function AdminDashboardPage() {
 
               {/* SECTION 4: Product Materials */}
               <div className="space-y-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-secondary border-b border-neutral-800 pb-2">4. Design Material & Finishing Details</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-secondary border-b border-neutral-200 dark:border-neutral-800 pb-2">4. Design Material & Finishing Details</h4>
                 
                 {/* List */}
                 {formMaterials.length > 0 && (
                   <div className="space-y-3">
                     {formMaterials.map((m, idx) => (
-                      <div key={idx} className="bg-neutral-950 p-4 border border-neutral-800 rounded flex justify-between items-center">
+                      <div key={idx} className="bg-neutral-50 dark:bg-neutral-950 p-4 border border-neutral-200 dark:border-neutral-800 rounded flex justify-between items-center text-neutral-800 dark:text-white">
                         <div>
                           <p className="font-bold">{m.title}</p>
-                          <p className="text-neutral-400 text-[11px] mt-0.5">{m.description}</p>
+                          <p className="text-neutral-500 dark:text-neutral-400 text-[11px] mt-0.5">{m.description}</p>
                         </div>
                         <button
                           type="button"
@@ -1145,31 +1323,31 @@ export default function AdminDashboardPage() {
                 )}
 
                 {/* Add Form */}
-                <div className="bg-neutral-950/80 p-5 border border-neutral-800 rounded flex flex-col sm:flex-row gap-4 items-end">
+                <div className="bg-neutral-50 dark:bg-neutral-950/80 p-5 border border-neutral-200 dark:border-neutral-800 rounded flex flex-col sm:flex-row gap-4 items-end">
                   <div className="space-y-1.5 flex-1 w-full">
-                    <label className="text-[10px] text-neutral-400 uppercase font-bold">Material Title</label>
+                    <label className="text-[10px] text-neutral-500 dark:text-neutral-400 uppercase font-bold">Material Title</label>
                     <input
                       type="text"
                       placeholder="e.g. Museum Grade Acrylic Substrate"
                       value={tempMaterialTitle}
                       onChange={(e) => setTempMaterialTitle(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded outline-none focus:border-primary placeholder:text-neutral-600"
+                      className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary text-neutral-800 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                     />
                   </div>
                   <div className="space-y-1.5 flex-1 w-full font-sans">
-                    <label className="text-[10px] text-neutral-400 uppercase font-bold">Material Description</label>
+                    <label className="text-[10px] text-neutral-500 dark:text-neutral-400 uppercase font-bold">Material Description</label>
                     <input
                       type="text"
                       placeholder="e.g. Premium 3mm thick clear cast acrylic sheet with smooth laser polished edges."
                       value={tempMaterialDescription}
                       onChange={(e) => setTempMaterialDescription(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded outline-none focus:border-primary placeholder:text-neutral-600"
+                      className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary text-neutral-800 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                     />
                   </div>
                   <button
                     type="button"
                     onClick={addMaterial}
-                    className="py-2.5 px-6 bg-secondary text-white font-bold uppercase tracking-widest hover:bg-secondary/95 transition-all rounded text-[10px] shrink-0 w-full sm:w-auto"
+                    className="py-2.5 px-6 bg-secondary text-white font-bold uppercase tracking-widest hover:bg-secondary/95 transition-all rounded text-[10px] shrink-0 w-full sm:w-auto cursor-pointer"
                   >
                     + Material
                   </button>
@@ -1178,39 +1356,38 @@ export default function AdminDashboardPage() {
             </form>
 
             {/* Modal Footer */}
-            <div className="flex justify-end gap-4 px-8 py-5 border-t border-neutral-800 bg-neutral-950 shrink-0">
+            <div className="flex justify-end gap-4 px-8 py-5 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 shrink-0">
               <button
                 type="button"
                 onClick={() => setShowFormModal(false)}
-                className="px-6 py-3 border border-neutral-800 hover:border-neutral-700 text-xs font-bold uppercase tracking-widest rounded transition-all text-neutral-300"
+                className="px-6 py-3 border border-neutral-200 hover:border-neutral-300 dark:border-neutral-800 dark:hover:border-neutral-700 text-xs font-bold uppercase tracking-widest rounded transition-all text-neutral-600 dark:text-neutral-300 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveProduct}
-                className="px-6 py-3 bg-primary text-white text-xs font-bold uppercase tracking-widest hover:bg-primary/95 rounded transition-all"
+                className="px-6 py-3 bg-primary text-white text-xs font-bold uppercase tracking-widest hover:bg-primary/95 rounded transition-all cursor-pointer"
               >
                 {editingProduct ? 'Save Product Changes' : 'Publish Product Design'}
               </button>
             </div>
-
           </div>
         </div>
       )}
 
       {showCategoriesModal && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm">
-          <div className="bg-neutral-900 border border-neutral-800 text-white rounded-lg max-w-lg w-full flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200 font-sans">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-white rounded-lg max-w-lg w-full flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200 font-sans">
             
             {/* Modal Header */}
-            <div className="flex justify-between items-center px-6 py-4 border-b border-neutral-800 shrink-0">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-neutral-200 dark:border-neutral-800 shrink-0">
               <h3 className="text-lg font-serif font-bold">Category Management</h3>
               <button
                 onClick={() => {
                   setShowCategoriesModal(false);
                   setSettingsCategoryName('');
                 }}
-                className="text-neutral-400 hover:text-white cursor-pointer"
+                className="text-neutral-400 hover:text-neutral-600 dark:hover:text-white cursor-pointer"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
@@ -1220,7 +1397,7 @@ export default function AdminDashboardPage() {
             <div className="p-6 space-y-6 overflow-y-auto">
               {/* Add New Category Form */}
               <form onSubmit={handleCreateSettingsCategory} className="space-y-2">
-                <label className="block text-[10px] uppercase tracking-wider text-neutral-400 font-bold">Add New Category</label>
+                <label className="block text-[10px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400 font-bold">Add New Category</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -1228,7 +1405,7 @@ export default function AdminDashboardPage() {
                     value={settingsCategoryName}
                     onChange={(e) => setSettingsCategoryName(e.target.value)}
                     placeholder="e.g. Birthday Frames"
-                    className="flex-1 px-4 py-3 bg-neutral-950 border border-neutral-800 rounded text-xs outline-none focus:border-primary text-white"
+                    className="flex-1 px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded text-xs outline-none focus:border-primary text-neutral-800 dark:text-white"
                     disabled={creatingSettingsCategory}
                   />
                   <button
@@ -1243,16 +1420,16 @@ export default function AdminDashboardPage() {
 
               {/* List of Categories */}
               <div className="space-y-3">
-                <label className="block text-[10px] uppercase tracking-wider text-neutral-400 font-bold">Active Categories ({categories.length})</label>
-                <div className="max-h-[300px] overflow-y-auto border border-neutral-800 rounded p-4 bg-neutral-950/40 divide-y divide-neutral-800">
+                <label className="block text-[10px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400 font-bold">Active Categories ({categories.length})</label>
+                <div className="max-h-[300px] overflow-y-auto border border-neutral-200 dark:border-neutral-800 rounded p-4 bg-neutral-50 dark:bg-neutral-950/40 divide-y divide-neutral-200 dark:divide-neutral-800">
                   {categories.length === 0 ? (
-                    <p className="text-xs text-neutral-400 italic">No categories created yet.</p>
+                    <p className="text-xs text-neutral-500 italic">No categories created yet.</p>
                   ) : (
                     categories.map((cat) => (
                       <div key={cat.id} className="py-3 flex items-center justify-between text-xs">
                         <div className="space-y-0.5">
-                          <p className="font-semibold text-white">{cat.name}</p>
-                          <p className="font-mono text-[9px] text-neutral-500">slug: {cat.slug}</p>
+                          <p className="font-semibold text-neutral-800 dark:text-white">{cat.name}</p>
+                          <p className="font-mono text-[9px] text-neutral-400 dark:text-neutral-500">slug: {cat.slug}</p>
                         </div>
                         <button
                           type="button"
