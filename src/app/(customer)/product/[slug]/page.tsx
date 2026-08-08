@@ -259,8 +259,59 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white font-sans">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+      <div className="bg-background min-h-screen py-16 px-6 md:px-20 max-w-[1440px] mx-auto animate-pulse space-y-12 font-sans">
+        {/* Breadcrumb Skeleton */}
+        <div className="h-4 bg-neutral-200 dark:bg-neutral-850 rounded w-1/4" />
+
+        {/* Split Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+          {/* Left Side: Product Gallery Skeleton */}
+          <div className="space-y-6">
+            <div className="aspect-square bg-neutral-200 dark:bg-neutral-800 rounded-sm border border-neutral-250 dark:border-neutral-850" />
+            <div className="grid grid-cols-5 gap-4">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="aspect-square bg-neutral-200 dark:bg-neutral-800 rounded-sm" />
+              ))}
+            </div>
+          </div>
+
+          {/* Right Side: Details Skeleton */}
+          <div className="space-y-8">
+            <div className="space-y-4">
+              <div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-1/5" />
+              <div className="h-8 bg-neutral-200 dark:bg-neutral-800 rounded w-3/4" />
+              <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-1/3" />
+            </div>
+
+            <div className="h-6 bg-neutral-200 dark:bg-neutral-800 rounded w-1/4" />
+
+            <div className="space-y-4 pt-4 border-t border-neutral-100 dark:border-neutral-900">
+              <div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-1/6" />
+              <div className="flex gap-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-10 bg-neutral-200 dark:bg-neutral-800 rounded w-20" />
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-neutral-100 dark:border-neutral-900">
+              <div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-1/6" />
+              <div className="flex gap-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-10 bg-neutral-200 dark:bg-neutral-800 rounded w-24" />
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-8">
+              <div className="h-12 bg-neutral-200 dark:bg-neutral-800 rounded w-full" />
+              <div className="flex gap-4">
+                <div className="h-14 bg-neutral-200 dark:bg-neutral-800 rounded w-1/4" />
+                <div className="h-14 bg-neutral-200 dark:bg-neutral-800 rounded w-3/4" />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

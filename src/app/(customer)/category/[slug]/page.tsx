@@ -163,8 +163,16 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
       {/* Products Grid */}
       <section className="py-16 px-6 md:px-20 max-w-[1440px] mx-auto">
         {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="animate-pulse border border-outline-variant/10 rounded overflow-hidden space-y-6 pb-6">
+                <div className="aspect-[4/5] bg-neutral-250 dark:bg-neutral-800" />
+                <div className="px-6 space-y-3 flex flex-col items-center">
+                  <div className="h-5 bg-neutral-200 dark:bg-neutral-800 rounded w-2/3" />
+                  <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-1/3" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-20">

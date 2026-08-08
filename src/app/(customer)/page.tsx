@@ -115,8 +115,16 @@ export default function HomePage() {
       {/* Product Grid */}
       <section className="pb-24 max-w-[1440px] mx-auto px-4 md:px-20">
         {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="animate-pulse space-y-5">
+                <div className="aspect-square rounded-sm bg-neutral-200 dark:bg-neutral-800 border border-neutral-200/50 dark:border-neutral-900/60" />
+                <div className="space-y-2 flex flex-col items-center">
+                  <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-2/3" />
+                  <div className="h-3.5 bg-neutral-200 dark:bg-neutral-800 rounded w-1/3" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
