@@ -161,25 +161,25 @@ export default function HomePage() {
         <div className="absolute top-0 right-0 w-1/2 h-full opacity-20 pointer-events-none">
           <div className="w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-secondary/40 via-transparent to-transparent"></div>
         </div>
-        <div className="max-w-[1440px] mx-auto px-4 md:px-20 relative z-10">
-          <h2 className="font-serif text-3xl md:text-5xl mb-8 leading-tight">
-            Ready to Transform Your Space?
+        <div className="max-w-[1440px] mx-auto px-4 md:px-20 relative z-10 font-sans">
+          <h2 className="font-serif text-3xl md:text-5xl mb-8 leading-tight text-white">
+            Bring Your Favorite Moments to Life
           </h2>
-          <p className="font-sans text-sm md:text-base mb-12 max-w-2xl mx-auto text-on-primary-container leading-relaxed">
-            Consult with our design experts to create a custom art piece that perfectly fits your architectural vision.
+          <p className="text-sm md:text-base mb-12 max-w-2xl mx-auto text-neutral-200 leading-relaxed">
+            Instantly upload your photos to preview and customize museum-grade acrylic frames, house name plates, or template-based birthday collages in our online mounting studio.
           </p>
           <div className="inline-flex flex-col sm:flex-row gap-6 justify-center">
             <Link
-              className="px-12 py-5 bg-white text-primary font-sans text-xs uppercase tracking-widest border border-transparent hover:border-secondary transition-all duration-300 font-bold"
-              href="/contact"
+              className="px-12 py-5 bg-white text-primary hover:bg-neutral-100 transition-all duration-300 font-bold text-xs uppercase tracking-widest cursor-pointer"
+              href="/category/all"
             >
-              Start Project
+              Customize Your Frame
             </Link>
             <Link
-              className="px-12 py-5 bg-transparent text-white font-sans text-xs uppercase tracking-widest border border-white hover:bg-white hover:text-black transition-all duration-300 font-bold"
-              href="/category/acrylic-photo-frames"
+              className="px-12 py-5 bg-transparent text-white border border-white hover:bg-white hover:text-black transition-all duration-300 font-bold text-xs uppercase tracking-widest cursor-pointer"
+              href="/contact"
             >
-              Explore Products
+              Contact Studio
             </Link>
           </div>
         </div>
