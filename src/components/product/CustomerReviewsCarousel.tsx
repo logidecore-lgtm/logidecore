@@ -57,7 +57,7 @@ export default function CustomerReviewsCarousel({ categoryId, categorySlug }: { 
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
-                className="w-[280px] sm:w-[320px] shrink-0 rounded-2xl aspect-[9/16] bg-neutral-200 dark:bg-neutral-900 animate-pulse relative overflow-hidden border border-neutral-200/80 dark:border-neutral-800"
+                className="w-[180px] sm:w-[280px] shrink-0 rounded-2xl aspect-[9/16] bg-neutral-200 dark:bg-neutral-900 animate-pulse relative overflow-hidden border border-neutral-200/80 dark:border-neutral-800"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_1.5s_infinite]"></div>
               </div>
@@ -124,7 +124,7 @@ export default function CustomerReviewsCarousel({ categoryId, categorySlug }: { 
             {marqueeReviews.map((review, index) => (
               <div
                 key={`${review.id}-${index}`}
-                className="w-[280px] sm:w-[320px] shrink-0 rounded-2xl overflow-hidden bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-850 shadow-md transition-all duration-300 hover:shadow-xl hover:scale-[1.015]"
+                className="w-[180px] sm:w-[280px] shrink-0 rounded-2xl overflow-hidden bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-850 shadow-md transition-all duration-300 hover:shadow-xl hover:scale-[1.015]"
               >
                 {/* Image layout container with skeleton placeholder */}
                 <div className="aspect-[9/16] relative overflow-hidden bg-neutral-100 dark:bg-neutral-950 flex items-center justify-center">

@@ -163,7 +163,7 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
       {/* Products Grid */}
       <section className="py-16 px-6 md:px-20 max-w-[1440px] mx-auto">
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-12">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="animate-pulse border border-outline-variant/10 rounded overflow-hidden space-y-6 pb-6">
                 <div className="aspect-[4/5] bg-neutral-250 dark:bg-neutral-800" />
@@ -194,7 +194,7 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-12">
             {filteredProducts.map((product) => (
               <div key={product.id} className="group relative bg-white border border-outline-variant/10 rounded-sm overflow-hidden flex flex-col justify-between">
                 {/* Sale Tag */}

@@ -9,16 +9,21 @@ import { useWishlist } from '@/hooks/use-wishlist';
 export default function Header({ user }: { user?: any }) {
   const { items } = useCart();
   const cartCount = items.reduce((acc, item) => acc + item.quantity, 0);
-  
+
   const { items: wishlistItems } = useWishlist();
   const wishlistCount = wishlistItems.length;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  
+  const [mounted, setMounted] = useState(false);
+
   const pathname = usePathname();
   const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Active check helper
   const isActive = (href: string) => {
@@ -65,7 +70,7 @@ export default function Header({ user }: { user?: any }) {
             </span>
           </Link>
         </div>
-        
+
         {/* Search Bar Middle */}
         <div ref={suggestionsRef} className="flex-[2] hidden md:flex justify-center relative">
           <form action="/search" method="GET" className="flex w-full max-w-md border border-outline-variant/50 rounded overflow-hidden bg-white focus-within:ring-2 focus-within:ring-secondary/20">
@@ -129,29 +134,29 @@ export default function Header({ user }: { user?: any }) {
 
         {/* Icons Right */}
         <div className="flex-1 flex justify-end items-center space-x-6">
-          <Link href={user ? "/dashboard" : "/login"} className="text-primary hover:text-secondary transition-colors" title="Account">
+          <Link href={user ? "/dashboard" : "/login"} className="hidden md:inline-flex text-primary hover:text-secondary transition-colors" title="Account">
             <span className="material-symbols-outlined">person</span>
           </Link>
-          
-          <Link href="/wishlist" className="text-primary hover:text-secondary transition-colors relative" title="Wishlist">
+
+          <Link href="/wishlist" className="hidden md:inline-flex text-primary hover:text-secondary transition-colors relative" title="Wishlist">
             <span className="material-symbols-outlined">favorite</span>
-            {wishlistCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-secondary text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
+            {mounted && wishlistCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-secondary text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-white animate-scale-in">
                 {wishlistCount}
               </span>
             )}
           </Link>
-          
-          <Link href="/cart" className="text-primary hover:text-secondary transition-colors relative" title="Shopping Bag">
+
+          <Link href="/cart" className="hidden md:inline-flex text-primary hover:text-secondary transition-colors relative" title="Shopping Bag">
             <span className="material-symbols-outlined">shopping_bag</span>
-            {cartCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-primary text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
+            {mounted && cartCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-primary text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-white animate-scale-in">
                 {cartCount}
               </span>
             )}
           </Link>
-          
-          <button 
+
+          <button
             onClick={() => setMobileMenuOpen(true)}
             className="md:hidden text-primary focus:outline-none"
           >
@@ -167,11 +172,10 @@ export default function Header({ user }: { user?: any }) {
             <li>
               <Link
                 href="/"
-                className={`font-sans text-xs uppercase tracking-widest pb-1 transition-all ${
-                  isActive('/') 
-                    ? 'text-primary border-b-2 border-primary font-bold' 
-                    : 'text-on-surface-variant hover:text-primary border-b-2 border-transparent'
-                }`}
+                className={`font-sans text-xs uppercase tracking-widest pb-1 transition-all ${isActive('/')
+                  ? 'text-primary border-b-2 border-primary font-bold'
+                  : 'text-on-surface-variant hover:text-primary border-b-2 border-transparent'
+                  }`}
               >
                 Home
               </Link>
@@ -179,11 +183,10 @@ export default function Header({ user }: { user?: any }) {
             <li>
               <Link
                 href="/category/all"
-                className={`font-sans text-xs uppercase tracking-widest pb-1 transition-all ${
-                  isActive('/category/all') 
-                    ? 'text-primary border-b-2 border-primary font-bold' 
-                    : 'text-on-surface-variant hover:text-primary border-b-2 border-transparent'
-                }`}
+                className={`font-sans text-xs uppercase tracking-widest pb-1 transition-all ${isActive('/category/all')
+                  ? 'text-primary border-b-2 border-primary font-bold'
+                  : 'text-on-surface-variant hover:text-primary border-b-2 border-transparent'
+                  }`}
               >
                 All Products
               </Link>
@@ -191,11 +194,10 @@ export default function Header({ user }: { user?: any }) {
             <li>
               <Link
                 href="/category/uv-frames"
-                className={`font-sans text-xs uppercase tracking-widest pb-1 transition-all ${
-                  isActive('/category/uv-frames') 
-                    ? 'text-primary border-b-2 border-primary font-bold' 
-                    : 'text-on-surface-variant hover:text-primary border-b-2 border-transparent'
-                }`}
+                className={`font-sans text-xs uppercase tracking-widest pb-1 transition-all ${isActive('/category/uv-frames')
+                  ? 'text-primary border-b-2 border-primary font-bold'
+                  : 'text-on-surface-variant hover:text-primary border-b-2 border-transparent'
+                  }`}
               >
                 UV Frames
               </Link>
@@ -203,11 +205,10 @@ export default function Header({ user }: { user?: any }) {
             <li>
               <Link
                 href="/category/acrylic-logo-mounts"
-                className={`font-sans text-xs uppercase tracking-widest pb-1 transition-all ${
-                  isActive('/category/acrylic-logo-mounts') 
-                    ? 'text-primary border-b-2 border-primary font-bold' 
-                    : 'text-on-surface-variant hover:text-primary border-b-2 border-transparent'
-                }`}
+                className={`font-sans text-xs uppercase tracking-widest pb-1 transition-all ${isActive('/category/acrylic-logo-mounts')
+                  ? 'text-primary border-b-2 border-primary font-bold'
+                  : 'text-on-surface-variant hover:text-primary border-b-2 border-transparent'
+                  }`}
               >
                 Business
               </Link>
@@ -215,11 +216,10 @@ export default function Header({ user }: { user?: any }) {
             <li>
               <Link
                 href="/order/track"
-                className={`font-sans text-xs uppercase tracking-widest pb-1 transition-all ${
-                  isActive('/order/track') 
-                    ? 'text-primary border-b-2 border-primary font-bold' 
-                    : 'text-on-surface-variant hover:text-primary border-b-2 border-transparent'
-                }`}
+                className={`font-sans text-xs uppercase tracking-widest pb-1 transition-all ${isActive('/order/track')
+                  ? 'text-primary border-b-2 border-primary font-bold'
+                  : 'text-on-surface-variant hover:text-primary border-b-2 border-transparent'
+                  }`}
               >
                 Order Status
               </Link>
@@ -227,11 +227,10 @@ export default function Header({ user }: { user?: any }) {
             <li>
               <Link
                 href="/blogs"
-                className={`font-sans text-xs uppercase tracking-widest pb-1 transition-all ${
-                  isActive('/blogs') 
-                    ? 'text-primary border-b-2 border-primary font-bold' 
-                    : 'text-on-surface-variant hover:text-primary border-b-2 border-transparent'
-                }`}
+                className={`font-sans text-xs uppercase tracking-widest pb-1 transition-all ${isActive('/blogs')
+                  ? 'text-primary border-b-2 border-primary font-bold'
+                  : 'text-on-surface-variant hover:text-primary border-b-2 border-transparent'
+                  }`}
               >
                 Blogs
               </Link>
@@ -241,16 +240,14 @@ export default function Header({ user }: { user?: any }) {
       </nav>
 
       {/* Slide-out Sidebar Drawer for Mobile & Tablet */}
-      <div 
-        className={`fixed inset-0 z-[99999] bg-black/60 transition-opacity duration-300 flex justify-start pointer-events-auto ${
-          mobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
+      <div
+        className={`fixed inset-0 z-[99999] bg-black/60 transition-opacity duration-300 flex justify-start pointer-events-auto ${mobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
         onClick={() => setMobileMenuOpen(false)}
       >
         <div
-          className={`w-80 max-w-[85vw] h-full bg-white shadow-2xl p-6 flex flex-col justify-between transition-transform duration-300 ${
-            mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
+          className={`w-80 max-w-[85vw] h-full bg-white shadow-2xl p-6 flex flex-col justify-between transition-transform duration-300 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Drawer Header */}
