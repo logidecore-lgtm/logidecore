@@ -30,6 +30,8 @@ interface ProductCustomizerModalProps {
     matSize: 'none' | 'thin' | 'wide';
     customText: string;
   }) => void;
+  isTemplateProduct?: boolean;
+  selectedSize?: string;
 }
 
 export default function ProductCustomizerModal({
@@ -47,6 +49,8 @@ export default function ProductCustomizerModal({
   initialTranslateX = 0,
   initialTranslateY = 0,
   onSave,
+  isTemplateProduct = false,
+  selectedSize = '',
 }: ProductCustomizerModalProps) {
   // Modal states
   const [imageUrl, setImageUrl] = useState(initialImageUrl);
@@ -170,7 +174,7 @@ export default function ProductCustomizerModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-300">
       <div className="bg-white dark:bg-neutral-900 text-primary w-full max-w-5xl h-[85vh] md:h-[600px] flex flex-col md:flex-row overflow-hidden shadow-2xl rounded-2xl animate-in zoom-in-95 duration-300 border border-neutral-100 dark:border-neutral-800">
-        
+
         {/* Hidden File Input for Triggering Upload */}
         <input
           ref={fileInputRef}
@@ -181,7 +185,7 @@ export default function ProductCustomizerModal({
         />
 
         {/* Left Side: Canvas Frame Preview */}
-        <div 
+        <div
           onClick={handleCanvasClick}
           className="flex-grow flex-[1.4] bg-[#eaeaea] dark:bg-neutral-950 flex flex-col items-center justify-center relative p-6 border-b md:border-b-0 md:border-r border-neutral-200 dark:border-neutral-800 h-[50%] md:h-auto cursor-pointer"
         >
@@ -198,7 +202,7 @@ export default function ProductCustomizerModal({
               <span className="material-symbols-outlined text-[16px]">restart_alt</span>
               Reset Design
             </button>
-            
+
             {/* Close Button */}
             <button
               onClick={(e) => {
@@ -219,24 +223,27 @@ export default function ProductCustomizerModal({
               </p>
             </div>
           ) : (
-            <FramePreview
-              imageUrl={imageUrl}
-              zoom={zoom}
-              rotation={rotation}
-              flipX={flipX}
-              flipY={flipY}
-              translateX={translateX}
-              translateY={translateY}
-              frameStyle={frameStyle}
-              matSize={matSize}
-              customText={customText}
-              templateUrl={templateUrl}
-              isInteractive={!!imageUrl}
-              onTransformChange={({ translateX: tx, translateY: ty }) => {
-                setTranslateX(tx);
-                setTranslateY(ty);
-              }}
-            />
+            <div className="w-full h-full flex items-center justify-center relative">
+              <FramePreview
+                imageUrl={imageUrl}
+                zoom={zoom}
+                rotation={rotation}
+                flipX={flipX}
+                flipY={flipY}
+                translateX={translateX}
+                translateY={translateY}
+                frameStyle={frameStyle}
+                matSize={matSize}
+                customText={customText}
+                templateUrl={templateUrl}
+                isInteractive={!!imageUrl}
+                selectedSize={selectedSize}
+                onTransformChange={({ translateX: tx, translateY: ty }) => {
+                  setTranslateX(tx);
+                  setTranslateY(ty);
+                }}
+              />
+            </div>
           )}
 
           {imageUrl && !uploading && (
@@ -251,7 +258,7 @@ export default function ProductCustomizerModal({
         {/* Right Side: Options & Control Panel */}
         <div className="w-full md:w-[380px] bg-white dark:bg-neutral-900 p-6 flex flex-col justify-between h-[50%] md:h-full font-sans border-t md:border-t-0 md:border-l border-neutral-100 dark:border-neutral-800">
           <div className="space-y-6">
-            
+
             {/* 1. Quick Transform Tools */}
             <div className="space-y-3">
               <span className="block text-[11px] font-bold uppercase tracking-widest text-neutral-400">
@@ -277,9 +284,8 @@ export default function ProductCustomizerModal({
                 <button
                   onClick={() => setFlipX((p) => !p)}
                   disabled={!imageUrl}
-                  className={`flex items-center justify-center p-3 border rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 transition-all cursor-pointer ${
-                    flipX ? 'border-primary bg-primary/5 text-primary' : 'border-neutral-200 dark:border-neutral-800'
-                  }`}
+                  className={`flex items-center justify-center p-3 border rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 transition-all cursor-pointer ${flipX ? 'border-primary bg-primary/5 text-primary' : 'border-neutral-200 dark:border-neutral-800'
+                    }`}
                   title="Flip Horizontal"
                 >
                   <span className="material-symbols-outlined text-[20px]">swap_horiz</span>
@@ -287,9 +293,8 @@ export default function ProductCustomizerModal({
                 <button
                   onClick={() => setFlipY((p) => !p)}
                   disabled={!imageUrl}
-                  className={`flex items-center justify-center p-3 border rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 transition-all cursor-pointer ${
-                    flipY ? 'border-primary bg-primary/5 text-primary' : 'border-neutral-200 dark:border-neutral-800'
-                  }`}
+                  className={`flex items-center justify-center p-3 border rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 transition-all cursor-pointer ${flipY ? 'border-primary bg-primary/5 text-primary' : 'border-neutral-200 dark:border-neutral-800'
+                    }`}
                   title="Flip Vertical"
                 >
                   <span className="material-symbols-outlined text-[20px]">swap_vert</span>
@@ -324,53 +329,38 @@ export default function ProductCustomizerModal({
               </div>
             )}
 
-            {/* Frame Style Configurator (shows if frameStyle is customizable and not preset template) */}
-            {imageUrl && frameStyle !== 'template' && (
-              <div className="space-y-3 pt-2 border-t border-neutral-100 dark:border-neutral-800">
-                <label className="block text-[11px] font-bold uppercase tracking-widest text-neutral-500">
-                  Select Frame Border Style
-                </label>
-                <div className="grid grid-cols-2 gap-2.5">
-                  {(['gold', 'black', 'oak', 'silver'] as const).map((style) => (
-                    <button
-                      key={style}
-                      onClick={() => setFrameStyle(style)}
-                      className={`flex items-center space-x-2.5 p-2.5 border rounded-lg transition-all text-left cursor-pointer ${
-                        frameStyle === style
-                          ? 'border-primary ring-2 ring-primary/10 bg-primary/5'
-                          : 'border-neutral-200 dark:border-neutral-850 hover:border-neutral-400'
-                      }`}
-                    >
-                      <div className={`w-5 h-5 rounded-full border border-black/10 ${
-                        style === 'gold' ? 'bg-gradient-to-tr from-[#997300] to-[#fff3b3]' :
-                        style === 'black' ? 'bg-neutral-900' :
-                        style === 'oak' ? 'bg-[#a87e56]' :
-                        'bg-gradient-to-tr from-[#888] to-[#e0e0e0]'
-                      }`} />
-                      <span className="text-[11px] font-bold capitalize">{style}</span>
-                    </button>
-                  ))}
+            {/* Selected Frame Size display */}
+            {selectedSize && (
+              <div className="space-y-2 pt-4 border-t border-neutral-100 dark:border-neutral-800 animate-in fade-in duration-200">
+                <span className="block text-[11px] font-bold uppercase tracking-widest text-neutral-400">
+                  Selected Frame Size
+                </span>
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-800 text-xs font-bold text-neutral-700 dark:text-neutral-350 rounded-lg">
+                  <span className="material-symbols-outlined text-[16px] text-amber-500">aspect_ratio</span>
+                  <span className="uppercase">{selectedSize.toLowerCase().replace('x', ' * ')} Inch</span>
                 </div>
               </div>
             )}
 
-            {/* 2. Text / Custom Name Input */}
-            <div className="space-y-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
-              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                Name/ Text
-              </label>
-              <input
-                type="text"
-                maxLength={20}
-                value={customText}
-                onChange={(e) => setCustomText(e.target.value)}
-                placeholder="Name/ Text"
-                className="w-full px-4 py-3 border border-neutral-200 dark:border-neutral-800 rounded-lg text-sm placeholder:text-neutral-450 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-sans bg-transparent"
-              />
-              <div className="text-[10px] text-neutral-400 text-right font-mono">
-                {customText.length}/20
+            {/* 2. Text / Custom Name Input - conditional on template cards */}
+            {isTemplateProduct && (
+              <div className="space-y-2 pt-4 border-t border-neutral-100 dark:border-neutral-800 animate-in fade-in duration-200">
+                <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300">
+                  Name/ Text
+                </label>
+                <input
+                  type="text"
+                  maxLength={20}
+                  value={customText}
+                  onChange={(e) => setCustomText(e.target.value)}
+                  placeholder="Name/ Text"
+                  className="w-full px-4 py-3 border border-neutral-200 dark:border-neutral-800 rounded-lg text-sm placeholder:text-neutral-450 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-sans bg-transparent"
+                />
+                <div className="text-[10px] text-neutral-400 text-right font-mono">
+                  {customText.length}/20
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Change Photo Trigger Button if photo already exists */}
             {imageUrl && (

@@ -368,6 +368,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                   matSize={customization.matSize}
                   customText={customization.customText}
                   isInteractive={false}
+                  selectedSize={selectedSize}
                 />
               </div>
             ) : activeImage ? (
@@ -381,10 +382,12 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                 No image available
               </div>
             )}
-            {/* Overlay indicators */}
-            <div className="absolute bottom-4 left-4 bg-black/60 text-white font-mono text-[10px] px-3 py-1 uppercase rounded-full">
-              F/4.0 | 1/160s | ISO 400
-            </div>
+            {/* Dynamic selected size overlay */}
+            {selectedSize && (
+              <div className="absolute bottom-4 left-4 bg-black/60 text-white font-sans text-[10px] font-bold px-3 py-1.5 uppercase rounded-full tracking-wider z-20">
+                Size: {selectedSize.toLowerCase().replace('x', ' * ')} Inch
+              </div>
+            )}
           </div>
 
           {/* Thumbnail strip */}
@@ -752,6 +755,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
             initialFlipY={customization?.flipY}
             initialTranslateX={customization?.translateX}
             initialTranslateY={customization?.translateY}
+            isTemplateProduct={isTemplateProduct}
+            selectedSize={selectedSize}
             onSave={(data) => {
               setCustomization(data);
               setUploadedImage(data.imageUrl);
