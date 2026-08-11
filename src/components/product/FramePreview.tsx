@@ -17,6 +17,7 @@ interface FramePreviewProps {
   isInteractive?: boolean;
   onTransformChange?: (transforms: { translateX: number; translateY: number }) => void;
   selectedSize?: string;
+  onZoomChange?: (zoom: number) => void;
 }
 
 export default function FramePreview({
@@ -34,10 +35,16 @@ export default function FramePreview({
   isInteractive = false,
   onTransformChange,
   selectedSize = '',
+  onZoomChange,
 }: FramePreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  // Touch tracking states for pinch-to-zoom
+  const activePointers = useRef<{ [pointerId: number]: { x: number; y: number } }>({});
+  const initialDistance = useRef<number | null>(null);
+  const initialZoomVal = useRef<number>(1);
 
   // Reset drag state if interactivity is turned off
   useEffect(() => {
@@ -49,34 +56,78 @@ export default function FramePreview({
   // Handle pointer down (mouse click or touch)
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isInteractive) return;
-    e.preventDefault();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    setIsDragging(true);
-    setDragStart({
-      x: e.clientX,
-      y: e.clientY,
-    });
+
+    // Add pointer to active list
+    activePointers.current[e.pointerId] = { x: e.clientX, y: e.clientY };
+
+    // If two fingers are touching, initialize pinch-to-zoom
+    const pointerKeys = Object.keys(activePointers.current);
+    if (pointerKeys.length === 2) {
+      const p1 = activePointers.current[Number(pointerKeys[0])];
+      const p2 = activePointers.current[Number(pointerKeys[1])];
+      const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      initialDistance.current = dist;
+      initialZoomVal.current = zoom;
+      setIsDragging(false); // Stop dragging when pinching starts
+    } else {
+      // Otherwise, handle regular single-finger drag start
+      e.preventDefault();
+      e.currentTarget.setPointerCapture(e.pointerId);
+      setIsDragging(true);
+      setDragStart({
+        x: e.clientX,
+        y: e.clientY,
+      });
+    }
   };
 
   // Handle pointer move
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDragging || !isInteractive) return;
-    e.preventDefault();
-    const dx = e.clientX - dragStart.x;
-    const dy = e.clientY - dragStart.y;
-    onTransformChange?.({
-      translateX: translateX + dx,
-      translateY: translateY + dy,
-    });
-    setDragStart({
-      x: e.clientX,
-      y: e.clientY,
-    });
+    if (!isInteractive) return;
+
+    // Update active pointer position
+    if (activePointers.current[e.pointerId]) {
+      activePointers.current[e.pointerId] = { x: e.clientX, y: e.clientY };
+    }
+
+    const pointerKeys = Object.keys(activePointers.current);
+    if (pointerKeys.length === 2 && initialDistance.current !== null && onZoomChange) {
+      // Pinch gesture active
+      const p1 = activePointers.current[Number(pointerKeys[0])];
+      const p2 = activePointers.current[Number(pointerKeys[1])];
+      const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      
+      // Calculate new zoom factor
+      const ratio = dist / initialDistance.current;
+      // Clamp zoom between 1.0 and 3.0
+      const newZoom = Math.min(Math.max(initialZoomVal.current * ratio, 1.0), 3.0);
+      onZoomChange(newZoom);
+    } else if (isDragging) {
+      // Drag gesture active (only if 1 finger)
+      e.preventDefault();
+      const dx = e.clientX - dragStart.x;
+      const dy = e.clientY - dragStart.y;
+      onTransformChange?.({
+        translateX: translateX + dx,
+        translateY: translateY + dy,
+      });
+      setDragStart({
+        x: e.clientX,
+        y: e.clientY,
+      });
+    }
   };
 
   // Handle pointer up
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isInteractive) return;
+
+    // Remove pointer from active list
+    delete activePointers.current[e.pointerId];
+
+    // Reset pinch distance tracking
+    initialDistance.current = null;
+
     if (e.currentTarget.hasPointerCapture(e.pointerId)) {
       e.currentTarget.releasePointerCapture(e.pointerId);
     }

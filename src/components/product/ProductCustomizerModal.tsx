@@ -173,7 +173,7 @@ export default function ProductCustomizerModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-300">
-      <div className="bg-white dark:bg-neutral-900 text-primary w-full max-w-5xl h-[85vh] md:h-[600px] flex flex-col md:flex-row overflow-hidden shadow-2xl rounded-2xl animate-in zoom-in-95 duration-300 border border-neutral-100 dark:border-neutral-800">
+      <div className="bg-white dark:bg-neutral-900 text-primary w-full max-w-5xl h-[94vh] lg:h-[600px] flex flex-col lg:flex-row overflow-hidden shadow-2xl rounded-2xl animate-in zoom-in-95 duration-300 border border-neutral-100 dark:border-neutral-800">
 
         {/* Hidden File Input for Triggering Upload */}
         <input
@@ -187,7 +187,7 @@ export default function ProductCustomizerModal({
         {/* Left Side: Canvas Frame Preview */}
         <div
           onClick={handleCanvasClick}
-          className="flex-grow flex-[1.4] bg-[#eaeaea] dark:bg-neutral-950 flex flex-col items-center justify-center relative p-6 border-b md:border-b-0 md:border-r border-neutral-200 dark:border-neutral-800 h-[50%] md:h-auto cursor-pointer"
+          className="flex-grow flex-[1.2] bg-[#eaeaea] dark:bg-neutral-950 flex flex-col items-center justify-center relative p-3 md:p-6 border-b lg:border-b-0 lg:border-r border-neutral-200 dark:border-neutral-800 h-[45%] lg:h-auto cursor-pointer"
         >
           {/* Top Control Overlay on Canvas */}
           <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-20 pointer-events-none">
@@ -238,6 +238,7 @@ export default function ProductCustomizerModal({
                 templateUrl={templateUrl}
                 isInteractive={!!imageUrl}
                 selectedSize={selectedSize}
+                onZoomChange={(z) => setZoom(z)}
                 onTransformChange={({ translateX: tx, translateY: ty }) => {
                   setTranslateX(tx);
                   setTranslateY(ty);
@@ -256,8 +257,8 @@ export default function ProductCustomizerModal({
         </div>
 
         {/* Right Side: Options & Control Panel */}
-        <div className="w-full md:w-[380px] bg-white dark:bg-neutral-900 p-6 flex flex-col justify-between h-[50%] md:h-full font-sans border-t md:border-t-0 md:border-l border-neutral-100 dark:border-neutral-800">
-          <div className="space-y-6">
+        <div className="w-full lg:w-[380px] bg-white dark:bg-neutral-900 p-4 md:p-6 pb-2 md:pb-6 flex flex-col justify-between h-[55%] lg:h-full overflow-y-auto lg:overflow-y-visible font-sans border-t lg:border-t-0 lg:border-l border-neutral-100 dark:border-neutral-800">
+          <div className="space-y-3.5 md:space-y-6">
 
             {/* 1. Quick Transform Tools */}
             <div className="space-y-3">
@@ -268,7 +269,7 @@ export default function ProductCustomizerModal({
                 <button
                   onClick={handleRotateLeft}
                   disabled={!imageUrl}
-                  className="flex items-center justify-center p-3 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 transition-all cursor-pointer"
+                  className="flex items-center justify-center p-2.5 md:p-3 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 transition-all cursor-pointer"
                   title="Rotate Left"
                 >
                   <span className="material-symbols-outlined text-[20px]">undo</span>
@@ -276,7 +277,7 @@ export default function ProductCustomizerModal({
                 <button
                   onClick={handleRotateRight}
                   disabled={!imageUrl}
-                  className="flex items-center justify-center p-3 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 transition-all cursor-pointer"
+                  className="flex items-center justify-center p-2.5 md:p-3 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 transition-all cursor-pointer"
                   title="Rotate Right"
                 >
                   <span className="material-symbols-outlined text-[20px]">redo</span>
@@ -284,7 +285,7 @@ export default function ProductCustomizerModal({
                 <button
                   onClick={() => setFlipX((p) => !p)}
                   disabled={!imageUrl}
-                  className={`flex items-center justify-center p-3 border rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 transition-all cursor-pointer ${flipX ? 'border-primary bg-primary/5 text-primary' : 'border-neutral-200 dark:border-neutral-800'
+                  className={`flex items-center justify-center p-2.5 md:p-3 border rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 transition-all cursor-pointer ${flipX ? 'border-primary bg-primary/5 text-primary' : 'border-neutral-200 dark:border-neutral-800'
                     }`}
                   title="Flip Horizontal"
                 >
@@ -293,7 +294,7 @@ export default function ProductCustomizerModal({
                 <button
                   onClick={() => setFlipY((p) => !p)}
                   disabled={!imageUrl}
-                  className={`flex items-center justify-center p-3 border rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 transition-all cursor-pointer ${flipY ? 'border-primary bg-primary/5 text-primary' : 'border-neutral-200 dark:border-neutral-800'
+                  className={`flex items-center justify-center p-2.5 md:p-3 border rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 transition-all cursor-pointer ${flipY ? 'border-primary bg-primary/5 text-primary' : 'border-neutral-200 dark:border-neutral-800'
                     }`}
                   title="Flip Vertical"
                 >
@@ -302,7 +303,7 @@ export default function ProductCustomizerModal({
                 <button
                   onClick={() => setImageUrl('')}
                   disabled={!imageUrl}
-                  className="flex items-center justify-center p-3 border border-red-100 dark:border-red-950 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 disabled:opacity-40 transition-all cursor-pointer"
+                  className="flex items-center justify-center p-2.5 md:p-3 border border-red-100 dark:border-red-950 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 disabled:opacity-40 transition-all cursor-pointer"
                   title="Delete Photo"
                 >
                   <span className="material-symbols-outlined text-[20px]">delete</span>
@@ -310,10 +311,9 @@ export default function ProductCustomizerModal({
               </div>
             </div>
 
-            {/* Optional Zoom Slider - shows only if photo is uploaded */}
             {imageUrl && (
-              <div className="space-y-2 animate-in fade-in duration-200">
-                <div className="flex justify-between text-[11px] font-bold uppercase tracking-widest text-neutral-500">
+              <div className="space-y-1.5 animate-in fade-in duration-200">
+                <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-neutral-500">
                   <span>Photo Zoom / Scale</span>
                   <span className="font-mono text-primary font-bold">{Math.round(zoom * 100)}%</span>
                 </div>
@@ -324,19 +324,19 @@ export default function ProductCustomizerModal({
                   step="0.05"
                   value={zoom}
                   onChange={(e) => setZoom(parseFloat(e.target.value))}
-                  className="w-full h-1 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-primary focus:outline-none"
+                  className="w-full h-1 bg-neutral-250 rounded-lg appearance-none cursor-pointer accent-primary focus:outline-none"
                 />
               </div>
             )}
 
             {/* Selected Frame Size display */}
             {selectedSize && (
-              <div className="space-y-2 pt-4 border-t border-neutral-100 dark:border-neutral-800 animate-in fade-in duration-200">
-                <span className="block text-[11px] font-bold uppercase tracking-widest text-neutral-400">
+              <div className="space-y-1.5 pt-3 border-t border-neutral-100 dark:border-neutral-800 animate-in fade-in duration-200">
+                <span className="block text-[10px] font-bold uppercase tracking-widest text-neutral-400">
                   Selected Frame Size
                 </span>
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-800 text-xs font-bold text-neutral-700 dark:text-neutral-350 rounded-lg">
-                  <span className="material-symbols-outlined text-[16px] text-amber-500">aspect_ratio</span>
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 md:px-3 md:py-1.5 bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-800 text-[11px] font-bold text-neutral-700 dark:text-neutral-350 rounded-lg">
+                  <span className="material-symbols-outlined text-[15px] text-amber-500">aspect_ratio</span>
                   <span className="uppercase">{selectedSize.toLowerCase().replace('x', ' * ')} Inch</span>
                 </div>
               </div>
@@ -344,8 +344,8 @@ export default function ProductCustomizerModal({
 
             {/* 2. Text / Custom Name Input - conditional on template cards */}
             {isTemplateProduct && (
-              <div className="space-y-2 pt-4 border-t border-neutral-100 dark:border-neutral-800 animate-in fade-in duration-200">
-                <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300">
+              <div className="space-y-1.5 pt-3 border-t border-neutral-100 dark:border-neutral-800 animate-in fade-in duration-200">
+                <label className="block text-[11px] font-bold text-neutral-700 dark:text-neutral-300">
                   Name/ Text
                 </label>
                 <input
@@ -354,9 +354,9 @@ export default function ProductCustomizerModal({
                   value={customText}
                   onChange={(e) => setCustomText(e.target.value)}
                   placeholder="Name/ Text"
-                  className="w-full px-4 py-3 border border-neutral-200 dark:border-neutral-800 rounded-lg text-sm placeholder:text-neutral-450 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-sans bg-transparent"
+                  className="w-full px-3.5 py-2 md:px-4 md:py-3 border border-neutral-200 dark:border-neutral-800 rounded-lg text-xs md:text-sm placeholder:text-neutral-450 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-sans bg-transparent"
                 />
-                <div className="text-[10px] text-neutral-400 text-right font-mono">
+                <div className="text-[9px] text-neutral-400 text-right font-mono">
                   {customText.length}/20
                 </div>
               </div>
@@ -364,15 +364,15 @@ export default function ProductCustomizerModal({
 
             {/* Change Photo Trigger Button if photo already exists */}
             {imageUrl && (
-              <div className="pt-2 relative">
+              <div className="pt-1.5 relative">
                 <input
                   type="file"
                   accept="image/*"
                   onChange={handleImageChange}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
                 />
-                <button className="w-full py-2.5 border border-dashed border-neutral-200 dark:border-neutral-800 hover:border-neutral-450 rounded-lg text-neutral-500 hover:text-neutral-700 font-sans text-xs uppercase tracking-widest font-bold flex items-center justify-center gap-2 bg-neutral-50/50 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all pointer-events-none">
-                  <span className="material-symbols-outlined text-[18px]">photo_library</span>
+                <button className="w-full py-2 border border-dashed border-neutral-200 dark:border-neutral-800 hover:border-neutral-450 rounded-lg text-neutral-500 hover:text-neutral-700 font-sans text-xs uppercase tracking-widest font-bold flex items-center justify-center gap-2 bg-neutral-50/50 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all pointer-events-none">
+                  <span className="material-symbols-outlined text-[16px]">photo_library</span>
                   Choose different photo
                 </button>
               </div>
@@ -381,10 +381,10 @@ export default function ProductCustomizerModal({
           </div>
 
           {/* 3. Footer / Save button */}
-          <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800">
+          <div className="pt-3.5 border-t border-neutral-100 dark:border-neutral-800">
             <button
               onClick={handleSave}
-              className="w-full py-4 bg-primary hover:bg-primary/95 text-white font-bold rounded-lg shadow-lg shadow-primary/10 transition-all text-sm uppercase tracking-widest cursor-pointer"
+              className="w-full py-3 bg-primary hover:bg-primary/95 text-white font-bold rounded-lg shadow-lg shadow-primary/10 transition-all text-xs uppercase tracking-widest cursor-pointer"
             >
               Save Design
             </button>
