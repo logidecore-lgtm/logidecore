@@ -188,7 +188,7 @@ export default function FramePreview({
       >
         <div
           ref={containerRef}
-          className="w-full h-full max-h-full flex flex-col bg-white relative overflow-hidden transition-all duration-300 shadow-xl rounded-lg border border-neutral-200"
+          className="w-full h-full max-h-full flex flex-col bg-white relative overflow-hidden transition-all duration-300 shadow-xl rounded-lg border border-neutral-200 touch-none"
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
@@ -241,7 +241,7 @@ export default function FramePreview({
       */}
       <div
         ref={containerRef}
-        className={`absolute overflow-hidden ${
+        className={`absolute overflow-hidden touch-none ${
           isInteractive ? 'cursor-grab active:cursor-grabbing' : ''
         }`}
         style={{
