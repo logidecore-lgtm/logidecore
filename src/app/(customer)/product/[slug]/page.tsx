@@ -8,12 +8,13 @@ import { compressImage } from '@/lib/image-utils';
 import FramePreview from '@/components/product/FramePreview';
 import ProductCustomizerModal from '@/components/product/ProductCustomizerModal';
 import CustomerReviewsCarousel from '@/components/product/CustomerReviewsCarousel';
-import TrustBadgesSection from '@/components/common/TrustBadgesSection';
+import TrustBadgesSection from '@/components/common/TrustBadgesSection';import { findFrameImage, getFrameConfigForSize, getSizeMockupConfig } from '@/config/frame-config';
 
 interface ProductImage {
   id: string;
   imageUrl: string;
   isThumbnail: boolean;
+  altText?: string | null;
 }
 
 interface ProductVariant {
@@ -63,6 +64,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
 
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedThickness, setSelectedThickness] = useState<string>('');
+  const [previewTab, setPreviewTab] = useState<'design' | 'size-guide'>('design');
 
   const [quantity, setQuantity] = useState(1);
   const [customText, setCustomText] = useState('');
@@ -99,7 +101,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
       .then((data) => {
         setProduct(data);
         const images = data.images || [];
-        const thumb = images.find((img: any) => img.isThumbnail)?.imageUrl || images[0]?.imageUrl || '';
+        const frameImg = findFrameImage(images);
+        const galleryImages = images.filter((img: any) => img.imageUrl !== frameImg?.imageUrl);
+        const thumb = galleryImages.find((img: any) => img.isThumbnail)?.imageUrl || galleryImages[0]?.imageUrl || '';
         setActiveImage(thumb);
 
         // Initialize size & thickness from variants
@@ -206,6 +210,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
       const defaultFrameStyle = isTemplateProduct ? 'template' : 'gold';
 
       setUploadedImage(data.url);
+      setActiveImage(data.url);
       setCustomization({
         imageUrl: data.url,
         zoom: 1,
@@ -333,6 +338,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
 
   const isWishlisted = hasItem(product.id);
 
+  // Resolve frame image and clean gallery images
+  const frameImage = findFrameImage(product.images || []);
+  const galleryImages = (product.images || []).filter((img) => img.imageUrl !== frameImage?.imageUrl);
+  const { aspectRatio, photoArea, frameImageUrl } = getFrameConfigForSize(product, selectedSize);
+
   return (
     <div className="bg-background min-h-screen py-16 px-6 md:px-20 max-w-[1440px] mx-auto">
       {/* Breadcrumb Navigation */}
@@ -352,21 +362,100 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
         {/* Left Side: Product Gallery */}
         <div className="space-y-6">
+          {/* Preview Mode Switcher */}
+          {!customization && (
+            <div className="flex border-b border-outline-variant/20 pb-1 gap-6">
+              <button
+                onClick={() => setPreviewTab('design')}
+                className={`pb-2 text-xs uppercase tracking-widest font-sans font-bold transition-all relative cursor-pointer ${
+                  previewTab === 'design' 
+                    ? 'text-primary' 
+                    : 'text-on-surface-variant/40 hover:text-primary/75'
+                }`}
+              >
+                Design Close-up
+                {previewTab === 'design' && (
+                  <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary animate-in fade-in slide-in-from-bottom-1 duration-200" />
+                )}
+              </button>
+              <button
+                onClick={() => setPreviewTab('size-guide')}
+                className={`pb-2 text-xs uppercase tracking-widest font-sans font-bold transition-all relative cursor-pointer ${
+                  previewTab === 'size-guide' 
+                    ? 'text-primary' 
+                    : 'text-on-surface-variant/40 hover:text-primary/75'
+                }`}
+              >
+                Size Comparison (In Hand)
+                {previewTab === 'size-guide' && (
+                  <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary animate-in fade-in slide-in-from-bottom-1 duration-200" />
+                )}
+              </button>
+            </div>
+          )}
+
           <div className="aspect-square bg-surface-container-low border border-outline-variant/30 overflow-hidden relative group rounded-sm flex items-center justify-center">
-            {activeImage === uploadedImage && customization ? (
+            {previewTab === 'size-guide' ? (
+              (() => {
+                const mockupConfig = getSizeMockupConfig(selectedSize);
+                if (mockupConfig) {
+                  return (
+                    <div className="relative w-full h-full bg-slate-50 dark:bg-neutral-900/10 flex items-center justify-center overflow-hidden">
+                      {/* Background Hand-Held Mockup */}
+                      <img
+                        src={`/size/${mockupConfig.filename}`}
+                        alt={`Size comparison mockup for ${selectedSize}`}
+                        className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
+                      />
+                      {/* Nested Frame Preview Overlay */}
+                      <div
+                        className="absolute"
+                        style={{
+                          left: `${mockupConfig.left}%`,
+                          top: `${mockupConfig.top}%`,
+                          width: `${mockupConfig.width}%`,
+                          height: `${mockupConfig.height}%`,
+                        }}
+                      >
+                        <FramePreview
+                          imageUrl={customization?.imageUrl || ''}
+                          frameImageUrl={frameImageUrl}
+                          photoArea={photoArea}
+                          aspectRatio={aspectRatio}
+                          zoom={customization?.zoom ?? 1}
+                          rotation={customization?.rotation ?? 0}
+                          flipX={customization?.flipX ?? false}
+                          flipY={customization?.flipY ?? false}
+                          translateX={customization?.translateX ?? 0}
+                          translateY={customization?.translateY ?? 0}
+                          isInteractive={false}
+                          selectedSize={selectedSize}
+                          onUploadClick={() => setCustomizerOpen(true)}
+                        />
+                      </div>
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div className="p-8 text-center text-xs font-sans text-on-surface-variant/50 uppercase tracking-widest">
+                      Visual size guide not available for size "{selectedSize}"
+                    </div>
+                  );
+                }
+              })()
+            ) : activeImage === uploadedImage && customization ? (
               <div className="w-full h-full flex items-center justify-center bg-neutral-900/5">
                 <FramePreview
                   imageUrl={customization.imageUrl}
-                  templateUrl={product.images?.[0]?.imageUrl || ''}
+                  frameImageUrl={frameImageUrl}
+                  photoArea={photoArea}
+                  aspectRatio={aspectRatio}
                   zoom={customization.zoom}
                   rotation={customization.rotation}
                   flipX={customization.flipX}
                   flipY={customization.flipY}
                   translateX={customization.translateX}
                   translateY={customization.translateY}
-                  frameStyle={customization.frameStyle}
-                  matSize={customization.matSize}
-                  customText={customization.customText}
                   isInteractive={false}
                   selectedSize={selectedSize}
                 />
@@ -392,11 +481,14 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
 
           {/* Thumbnail strip */}
           <div className="grid grid-cols-5 gap-4">
-            {product.images?.map((img, index) => (
+            {galleryImages.map((img, index) => (
               <button
                 key={index}
-                onClick={() => setActiveImage(img.imageUrl)}
-                className={`aspect-square overflow-hidden border bg-surface-container-low rounded-sm transition-all ${activeImage === img.imageUrl ? 'border-primary ring-2 ring-primary/20' : 'border-outline-variant/30 hover:border-primary'
+                onClick={() => {
+                  setActiveImage(img.imageUrl);
+                  setPreviewTab('design');
+                }}
+                className={`aspect-square overflow-hidden border bg-surface-container-low rounded-sm transition-all cursor-pointer ${activeImage === img.imageUrl && previewTab === 'design' ? 'border-primary ring-2 ring-primary/20' : 'border-outline-variant/30 hover:border-primary'
                   }`}
               >
                 <img src={img.imageUrl} alt="thumbnail" className="w-full h-full object-cover" />
@@ -404,8 +496,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
             ))}
             {uploadedImage && (
               <button
-                onClick={() => setActiveImage(uploadedImage)}
-                className={`aspect-square overflow-hidden border bg-surface-container-low rounded-sm transition-all relative flex items-center justify-center ${activeImage === uploadedImage ? 'border-primary ring-2 ring-primary/20' : 'border-outline-variant/30 hover:border-primary'
+                onClick={() => {
+                  setActiveImage(uploadedImage);
+                  setPreviewTab('design');
+                }}
+                className={`aspect-square overflow-hidden border bg-surface-container-low rounded-sm transition-all relative flex items-center justify-center cursor-pointer ${activeImage === uploadedImage && previewTab === 'design' ? 'border-primary ring-2 ring-primary/20' : 'border-outline-variant/30 hover:border-primary'
                   }`}
               >
                 <img src={uploadedImage} alt="custom design thumbnail" className="w-full h-full object-cover" />
@@ -523,16 +618,15 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                       {customization ? (
                         <FramePreview
                           imageUrl={customization.imageUrl}
-                          templateUrl={product.images?.[0]?.imageUrl || ''}
+                          frameImageUrl={frameImageUrl}
+                          photoArea={photoArea}
+                          aspectRatio={aspectRatio}
                           zoom={customization.zoom}
                           rotation={customization.rotation}
                           flipX={customization.flipX}
                           flipY={customization.flipY}
                           translateX={customization.translateX}
                           translateY={customization.translateY}
-                          frameStyle={customization.frameStyle}
-                          matSize={customization.matSize}
-                          customText={customization.customText}
                           isInteractive={false}
                         />
                       ) : (
@@ -563,9 +657,16 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                         onClick={(e) => {
                           e.stopPropagation();
                           e.preventDefault();
-                          setUploadedImage(null);
-                          setCustomization(null);
-                        }}
+      setUploadedImage(null);
+      setCustomization(null);
+      if (product?.images?.length) {
+        const frameImg = findFrameImage(product.images);
+        const galleryImage = product.images.find((img) => img.imageUrl !== frameImg?.imageUrl);
+        setActiveImage(galleryImage?.imageUrl || '');
+      } else {
+        setActiveImage('');
+      }
+    }}
                         className="px-4 py-2 border border-red-200 hover:border-red-400 text-red-600 hover:text-red-700 transition-all text-[10px] uppercase tracking-widest font-bold font-sans rounded-sm cursor-pointer"
                       >
                         Remove Photo
@@ -738,17 +839,13 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
           product?.category?.slug?.toLowerCase().includes('collage') ||
           product?.category?.name?.toLowerCase().includes('collage')
         );
-        const defaultFrameStyle = isTemplateProduct ? 'template' : 'gold';
-
         return (
           <ProductCustomizerModal
             isOpen={customizerOpen}
             onClose={() => setCustomizerOpen(false)}
             imageUrl={customization?.imageUrl || uploadedImage || ''}
-            templateUrl={product.images?.[0]?.imageUrl || ''}
+            product={product}
             initialCustomText={customization?.customText ?? customText}
-            initialFrameStyle={customization?.frameStyle || defaultFrameStyle}
-            initialMatSize={customization?.matSize || (defaultFrameStyle === 'template' ? 'none' : 'wide')}
             initialZoom={customization?.zoom}
             initialRotation={customization?.rotation}
             initialFlipX={customization?.flipX}
@@ -762,6 +859,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
               setUploadedImage(data.imageUrl);
               setCustomText(data.customText);
               setActiveImage(data.imageUrl); // Set the active gallery view to show the custom design
+              setPreviewTab('size-guide');  // Auto-switch directly to hand size comparison mode
             }}
           />
         );

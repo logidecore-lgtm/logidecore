@@ -3,15 +3,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import FramePreview from './FramePreview';
 import { compressImage } from '@/lib/image-utils';
+import { getFrameConfigForSize, ProductImage } from '@/config/frame-config';
 
 interface ProductCustomizerModalProps {
   isOpen: boolean;
   onClose: () => void;
   imageUrl: string;
-  templateUrl?: string;
+  product: {
+    slug: string;
+    images?: ProductImage[];
+    frameConfigs?: any[];
+  };
   initialCustomText?: string;
-  initialFrameStyle?: 'gold' | 'black' | 'oak' | 'silver' | 'template';
-  initialMatSize?: 'none' | 'thin' | 'wide';
   initialZoom?: number;
   initialRotation?: number;
   initialFlipX?: boolean;
@@ -26,7 +29,7 @@ interface ProductCustomizerModalProps {
     flipY: boolean;
     translateX: number;
     translateY: number;
-    frameStyle: 'gold' | 'black' | 'oak' | 'silver' | 'template';
+    frameStyle: 'template';
     matSize: 'none' | 'thin' | 'wide';
     customText: string;
   }) => void;
@@ -38,10 +41,8 @@ export default function ProductCustomizerModal({
   isOpen,
   onClose,
   imageUrl: initialImageUrl,
-  templateUrl = '',
+  product,
   initialCustomText = '',
-  initialFrameStyle = 'gold',
-  initialMatSize = 'wide',
   initialZoom = 1,
   initialRotation = 0,
   initialFlipX = false,
@@ -53,34 +54,34 @@ export default function ProductCustomizerModal({
   selectedSize = '',
 }: ProductCustomizerModalProps) {
   // Modal states
-  const [imageUrl, setImageUrl] = useState(initialImageUrl);
+  const [customerImageUrl, setCustomerImageUrl] = useState('');
   const [zoom, setZoom] = useState(initialZoom);
   const [rotation, setRotation] = useState(initialRotation);
   const [flipX, setFlipX] = useState(initialFlipX);
   const [flipY, setFlipY] = useState(initialFlipY);
   const [translateX, setTranslateX] = useState(initialTranslateX);
   const [translateY, setTranslateY] = useState(initialTranslateY);
-  const [frameStyle, setFrameStyle] = useState<'gold' | 'black' | 'oak' | 'silver' | 'template'>(initialFrameStyle);
-  const [matSize, setMatSize] = useState<'none' | 'thin' | 'wide'>(initialMatSize);
   const [customText, setCustomText] = useState(initialCustomText);
 
   const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const changePhotoInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Resolve dynamic size configuration from database or fallback local settings
+  const { aspectRatio, photoArea, frameImageUrl } = getFrameConfigForSize(product, selectedSize);
 
   // Sync state with props when modal opens
   useEffect(() => {
-    if (isOpen) {
-      setImageUrl(initialImageUrl);
-      setZoom(initialZoom);
-      setRotation(initialRotation);
-      setFlipX(initialFlipX);
-      setFlipY(initialFlipY);
-      setTranslateX(initialTranslateX);
-      setTranslateY(initialTranslateY);
-      setFrameStyle(initialFrameStyle);
-      setMatSize(initialMatSize);
-      setCustomText(initialCustomText);
-    }
+    if (!isOpen) return;
+
+    setCustomerImageUrl(initialImageUrl || '');
+    setZoom(initialZoom);
+    setRotation(initialRotation);
+    setFlipX(initialFlipX);
+    setFlipY(initialFlipY);
+    setTranslateX(initialTranslateX);
+    setTranslateY(initialTranslateY);
+    setCustomText(initialCustomText);
   }, [
     isOpen,
     initialImageUrl,
@@ -90,8 +91,6 @@ export default function ProductCustomizerModal({
     initialFlipY,
     initialTranslateX,
     initialTranslateY,
-    initialFrameStyle,
-    initialMatSize,
     initialCustomText,
   ]);
 
@@ -117,7 +116,7 @@ export default function ProductCustomizerModal({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to upload image');
 
-      setImageUrl(data.url);
+      setCustomerImageUrl(data.url);
       // Reset transformations for the new image
       setZoom(1);
       setRotation(0);
@@ -129,6 +128,8 @@ export default function ProductCustomizerModal({
       alert(err.message || 'Image upload failed');
     } finally {
       setUploading(false);
+      // Reset input value to allow selecting same file again
+      e.target.value = '';
     }
   };
 
@@ -150,23 +151,28 @@ export default function ProductCustomizerModal({
   };
 
   const handleSave = () => {
+    if (!customerImageUrl) {
+      alert('Please upload a photo first.');
+      return;
+    }
+
     onSave({
-      imageUrl,
+      imageUrl: customerImageUrl,
       zoom,
       rotation,
       flipX,
       flipY,
       translateX,
       translateY,
-      frameStyle,
-      matSize,
+      frameStyle: 'template',
+      matSize: 'none',
       customText,
     });
     onClose();
   };
 
   const handleCanvasClick = () => {
-    if (!imageUrl && fileInputRef.current) {
+    if (!uploading && fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
@@ -223,31 +229,34 @@ export default function ProductCustomizerModal({
               </p>
             </div>
           ) : (
-            <div className="w-full h-full flex items-center justify-center relative">
+            <div 
+              className="w-full max-w-[min(90vw,520px)] flex items-center justify-center relative"
+              style={{ aspectRatio }}
+            >
               <FramePreview
-                imageUrl={imageUrl}
+                imageUrl={customerImageUrl}
+                frameImageUrl={frameImageUrl}
+                photoArea={photoArea}
+                aspectRatio={aspectRatio}
                 zoom={zoom}
                 rotation={rotation}
                 flipX={flipX}
                 flipY={flipY}
                 translateX={translateX}
                 translateY={translateY}
-                frameStyle={frameStyle}
-                matSize={matSize}
-                customText={customText}
-                templateUrl={templateUrl}
-                isInteractive={!!imageUrl}
+                isInteractive={!!customerImageUrl}
                 selectedSize={selectedSize}
                 onZoomChange={(z) => setZoom(z)}
                 onTransformChange={({ translateX: tx, translateY: ty }) => {
                   setTranslateX(tx);
                   setTranslateY(ty);
                 }}
+                onUploadClick={handleCanvasClick}
               />
             </div>
           )}
 
-          {imageUrl && !uploading && (
+          {customerImageUrl && !uploading && (
             <div className="absolute bottom-4 left-4 right-4 text-center pointer-events-none select-none">
               <span className="bg-black/60 text-[10px] md:text-xs text-white/80 font-sans tracking-wider px-3 py-1.5 rounded-full uppercase">
                 💡 Click & Drag photo inside frame to reposition
@@ -268,23 +277,23 @@ export default function ProductCustomizerModal({
               <div className="grid grid-cols-5 gap-2">
                 <button
                   onClick={handleRotateLeft}
-                  disabled={!imageUrl}
-                  className="flex items-center justify-center p-2.5 md:p-3 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 transition-all cursor-pointer"
+                  disabled={!customerImageUrl}
+                  className="flex items-center justify-center p-2.5 md:p-3 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-600 dark:text-neutral-350 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 transition-all cursor-pointer"
                   title="Rotate Left"
                 >
                   <span className="material-symbols-outlined text-[20px]">undo</span>
                 </button>
                 <button
                   onClick={handleRotateRight}
-                  disabled={!imageUrl}
-                  className="flex items-center justify-center p-2.5 md:p-3 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 transition-all cursor-pointer"
+                  disabled={!customerImageUrl}
+                  className="flex items-center justify-center p-2.5 md:p-3 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-600 dark:text-neutral-350 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 transition-all cursor-pointer"
                   title="Rotate Right"
                 >
                   <span className="material-symbols-outlined text-[20px]">redo</span>
                 </button>
                 <button
                   onClick={() => setFlipX((p) => !p)}
-                  disabled={!imageUrl}
+                  disabled={!customerImageUrl}
                   className={`flex items-center justify-center p-2.5 md:p-3 border rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 transition-all cursor-pointer ${flipX ? 'border-primary bg-primary/5 text-primary' : 'border-neutral-200 dark:border-neutral-800'
                     }`}
                   title="Flip Horizontal"
@@ -293,7 +302,7 @@ export default function ProductCustomizerModal({
                 </button>
                 <button
                   onClick={() => setFlipY((p) => !p)}
-                  disabled={!imageUrl}
+                  disabled={!customerImageUrl}
                   className={`flex items-center justify-center p-2.5 md:p-3 border rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 transition-all cursor-pointer ${flipY ? 'border-primary bg-primary/5 text-primary' : 'border-neutral-200 dark:border-neutral-800'
                     }`}
                   title="Flip Vertical"
@@ -301,8 +310,8 @@ export default function ProductCustomizerModal({
                   <span className="material-symbols-outlined text-[20px]">swap_vert</span>
                 </button>
                 <button
-                  onClick={() => setImageUrl('')}
-                  disabled={!imageUrl}
+                  onClick={() => setCustomerImageUrl('')}
+                  disabled={!customerImageUrl}
                   className="flex items-center justify-center p-2.5 md:p-3 border border-red-100 dark:border-red-950 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 disabled:opacity-40 transition-all cursor-pointer"
                   title="Delete Photo"
                 >
@@ -311,7 +320,8 @@ export default function ProductCustomizerModal({
               </div>
             </div>
 
-            {imageUrl && (
+            {/* Optional Zoom Slider - shows only if photo is uploaded */}
+            {customerImageUrl && (
               <div className="space-y-1.5 animate-in fade-in duration-200">
                 <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-neutral-500">
                   <span>Photo Zoom / Scale</span>
@@ -362,21 +372,23 @@ export default function ProductCustomizerModal({
               </div>
             )}
 
-            {/* Change Photo Trigger Button if photo already exists */}
-            {imageUrl && (
-              <div className="pt-1.5 relative">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
-                />
-                <button className="w-full py-2 border border-dashed border-neutral-200 dark:border-neutral-800 hover:border-neutral-450 rounded-lg text-neutral-500 hover:text-neutral-700 font-sans text-xs uppercase tracking-widest font-bold flex items-center justify-center gap-2 bg-neutral-50/50 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all pointer-events-none">
-                  <span className="material-symbols-outlined text-[16px]">photo_library</span>
-                  Choose different photo
-                </button>
-              </div>
-            )}
+            {/* Always visible Upload button */}
+            <div className="pt-1.5 relative">
+              <input
+                ref={changePhotoInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+              />
+              <button
+                type="button"
+                className="w-full py-2 border border-dashed border-neutral-200 dark:border-neutral-800 hover:border-neutral-450 rounded-lg text-neutral-500 hover:text-neutral-700 font-sans text-xs uppercase tracking-widest font-bold flex items-center justify-center gap-2 bg-neutral-50/50 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all pointer-events-none"
+              >
+                <span className="material-symbols-outlined text-[16px]">photo_library</span>
+                {customerImageUrl ? 'Choose different photo' : 'Upload photo'}
+              </button>
+            </div>
 
           </div>
 

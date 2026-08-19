@@ -1,41 +1,46 @@
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
+import { PhotoArea, DEFAULT_PHOTO_AREA } from '@/config/frame-config';
 
 interface FramePreviewProps {
   imageUrl: string;
+  frameImageUrl: string;
+  photoArea?: PhotoArea;
+  aspectRatio?: string;
   zoom: number;
   rotation: number; // in degrees (e.g., 0, 90, 180, 270)
   flipX: boolean;
   flipY: boolean;
   translateX: number;
   translateY: number;
-  frameStyle: 'gold' | 'black' | 'oak' | 'silver' | 'template';
-  matSize: 'none' | 'thin' | 'wide';
-  customText?: string;
-  templateUrl?: string;
   isInteractive?: boolean;
   onTransformChange?: (transforms: { translateX: number; translateY: number }) => void;
   selectedSize?: string;
   onZoomChange?: (zoom: number) => void;
+  customText?: string;
+  matSize?: string;
+  onUploadClick?: () => void;
 }
 
 export default function FramePreview({
   imageUrl,
+  frameImageUrl,
+  photoArea = DEFAULT_PHOTO_AREA,
+  aspectRatio = '1/1',
   zoom,
   rotation,
   flipX,
   flipY,
   translateX,
   translateY,
-  frameStyle,
-  matSize,
-  customText = '',
-  templateUrl = '',
   isInteractive = false,
   onTransformChange,
   selectedSize = '',
   onZoomChange,
+  customText = '',
+  matSize = 'none',
+  onUploadClick,
 }: FramePreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -134,43 +139,6 @@ export default function FramePreview({
     setIsDragging(false);
   };
 
-  // Get frame styling based on selection - all borders removed for full-size print display
-  const getFrameStyle = () => {
-    return {
-      boxShadow: 'none',
-      border: 'none',
-    };
-  };
-
-  // Remove mat board padding completely so images occupy 100% full size
-  const getMatPadding = () => {
-    return 'p-0';
-  };
-
-  // Dynamically resolve aspect ratio based on selectedSize string (e.g. 8x12, 12x12)
-  const getAspectRatioStyle = () => {
-    if (!selectedSize) return { aspectRatio: '3/4' };
-    
-    const clean = selectedSize.toLowerCase().replace(/"/g, '').replace(/\s+/g, '');
-    
-    // Check for square sizes
-    if (clean.includes('8x8') || clean.includes('12x12') || clean.includes('8*8') || clean.includes('12*12') || clean.includes('10x10')) {
-      return { aspectRatio: '1/1' };
-    }
-    
-    // Parse dimensions from strings like "8x12", "12*18"
-    const match = clean.match(/(\d+)(?:x|\*|by|&)(\d+)/);
-    if (match) {
-      const w = parseInt(match[1], 10);
-      const h = parseInt(match[2], 10);
-      if (w > 0 && h > 0) {
-        return { aspectRatio: `${w}/${h}` };
-      }
-    }
-    
-    return { aspectRatio: '3/4' };
-  };
-
   // Combine translation, scaling (zoom), rotation, and flips into a single CSS transform string
   const transformStyle = {
     transform: `translate(${translateX}px, ${translateY}px) scale(${zoom}) rotate(${rotation}deg) scaleX(${
@@ -179,65 +147,16 @@ export default function FramePreview({
     transition: isDragging ? 'none' : 'transform 0.2s cubic-bezier(0.25, 0.1, 0.25, 1)',
   };
 
-  // Dynamic template layout (vocal size updates to fill parent height/width)
-  if (frameStyle === 'template' && templateUrl) {
-    return (
-      <div 
-        className="flex flex-col items-center justify-center w-full h-full max-h-full p-0"
-        style={{ userSelect: 'none' }}
-      >
-        <div
-          ref={containerRef}
-          className="w-full h-full max-h-full flex flex-col bg-white relative overflow-hidden transition-all duration-300 shadow-xl rounded-lg border border-neutral-200 touch-none"
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerLeave={handlePointerUp}
-          style={{ cursor: isInteractive ? 'grab' : 'default', ...getAspectRatioStyle() }}
-        >
-          {/* User's Photo Layer (Placed underneath template) */}
-          <div className="absolute inset-0 overflow-hidden bg-neutral-100 dark:bg-neutral-900 pointer-events-none select-none">
-            {imageUrl ? (
-              <img
-                src={imageUrl}
-                alt="Customized Preview"
-                className="absolute w-full h-full object-cover"
-                style={transformStyle}
-                draggable={false}
-              />
-            ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-100 dark:bg-neutral-900">
-                <span className="bg-neutral-900/80 text-white font-sans text-[11px] font-bold uppercase tracking-widest px-4 py-2 rounded shadow-md pointer-events-none">
-                  Tap to upload
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Template Overlay (Placed on top of photo) */}
-          <img
-            src={templateUrl}
-            alt="Template Overlay"
-            className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none z-10"
-            draggable={false}
-          />
-          {selectedSize && (
-            <div className="absolute bottom-4 left-4 bg-black/65 text-white font-sans text-[10px] font-bold px-3 py-1.5 uppercase rounded-full tracking-widest z-20 pointer-events-none select-none">
-              Size: {selectedSize.toLowerCase().replace('x', ' * ')} Inch
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div 
-      className="relative w-full h-full aspect-square select-none"
-      style={{ userSelect: 'none' }}
+      className="relative w-full h-full select-none"
+      style={{ 
+        userSelect: 'none',
+        aspectRatio: aspectRatio,
+      }}
     >
       {/* PHOTO WINDOW
-          This matches the transparent opening inside ary-frame.png
+          Matches the transparent opening inside frameImageUrl
       */}
       <div
         ref={containerRef}
@@ -245,10 +164,10 @@ export default function FramePreview({
           isInteractive ? 'cursor-grab active:cursor-grabbing' : ''
         }`}
         style={{
-          left: '26.5%',
-          top: '11%',
-          width: '47.4%',
-          height: '74.2%',
+          left: `${photoArea.left}%`,
+          top: `${photoArea.top}%`,
+          width: `${photoArea.width}%`,
+          height: `${photoArea.height}%`,
         }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -267,7 +186,15 @@ export default function FramePreview({
             }}
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div 
+            onClick={(e) => {
+              if (onUploadClick) {
+                e.stopPropagation();
+                onUploadClick();
+              }
+            }}
+            className="absolute inset-0 flex items-center justify-center bg-neutral-100 dark:bg-neutral-900/40 cursor-pointer"
+          >
             <span className="bg-neutral-900/80 text-white text-[11px] font-bold uppercase tracking-widest px-4 py-2 rounded shadow-md pointer-events-none">
               Tap to upload
             </span>
@@ -279,12 +206,14 @@ export default function FramePreview({
       </div>
 
       {/* FRAME — ALWAYS ON TOP */}
-      <img
-        src="/ary-frame.png"
-        alt="Frame"
-        draggable={false}
-        className="absolute inset-0 w-full h-full object-fill pointer-events-none select-none z-10"
-      />
+      {frameImageUrl && (
+        <img
+          src={frameImageUrl}
+          alt="Frame"
+          draggable={false}
+          className="absolute inset-0 w-full h-full object-fill pointer-events-none select-none z-10"
+        />
+      )}
 
       {/* Size */}
       {selectedSize && (

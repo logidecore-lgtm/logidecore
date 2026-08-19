@@ -36,6 +36,19 @@ interface ProductMaterial {
   description: string;
 }
 
+interface ProductFrameConfig {
+  id?: string;
+  size: string;
+  frameImageUrl: string;
+  aspectRatioWidth: number | string;
+  aspectRatioHeight: number | string;
+  photoAreaLeft: number | string;
+  photoAreaTop: number | string;
+  photoAreaWidth: number | string;
+  photoAreaHeight: number | string;
+  enabled?: boolean;
+}
+
 interface Product {
   id: string;
   categoryId: string;
@@ -51,6 +64,7 @@ interface Product {
   images: ProductImage[];
   variants: ProductVariant[];
   materials: ProductMaterial[];
+  frameConfigs?: ProductFrameConfig[];
   category?: Category;
 }
 
@@ -89,6 +103,17 @@ export default function AdminDashboardPage() {
   const [formImages, setFormImages] = useState<ProductImage[]>([]);
   const [formVariants, setFormVariants] = useState<ProductVariant[]>([]);
   const [formMaterials, setFormMaterials] = useState<ProductMaterial[]>([]);
+  const [formFrameConfigs, setFormFrameConfigs] = useState<ProductFrameConfig[]>([]);
+
+  // Add configuration temp fields
+  const [tempFrameSize, setTempFrameSize] = useState('');
+  const [tempFrameImageUrl, setTempFrameImageUrl] = useState('');
+  const [tempFrameRatioW, setTempFrameRatioW] = useState('1');
+  const [tempFrameRatioH, setTempFrameRatioH] = useState('1');
+  const [tempPhotoLeft, setTempPhotoLeft] = useState('26.5');
+  const [tempPhotoTop, setTempPhotoTop] = useState('11');
+  const [tempPhotoWidth, setTempPhotoWidth] = useState('47.4');
+  const [tempPhotoHeight, setTempPhotoHeight] = useState('74.2');
 
   // Dynamic Category Creation States
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -300,7 +325,6 @@ export default function AdminDashboardPage() {
     }
   }, [formName, editingProduct]);
 
-  // 2. Form Open/Edit Handlers
   const handleOpenAddModal = () => {
     setEditingProduct(null);
     setFormName('');
@@ -316,6 +340,15 @@ export default function AdminDashboardPage() {
     setFormImages([]);
     setFormVariants([]);
     setFormMaterials([]);
+    setFormFrameConfigs([]);
+    setTempFrameSize('');
+    setTempFrameImageUrl('');
+    setTempFrameRatioW('1');
+    setTempFrameRatioH('1');
+    setTempPhotoLeft('26.5');
+    setTempPhotoTop('11');
+    setTempPhotoWidth('47.4');
+    setTempPhotoHeight('74.2');
     setFormError('');
     setShowNewCategoryInput(false);
     setNewCategoryName('');
@@ -339,6 +372,15 @@ export default function AdminDashboardPage() {
     setFormImages(product.images.map(img => ({ ...img })));
     setFormVariants(product.variants.map(v => ({ ...v })));
     setFormMaterials(product.materials.map(m => ({ ...m })));
+    setFormFrameConfigs(product.frameConfigs ? product.frameConfigs.map(fc => ({ ...fc })) : []);
+    setTempFrameSize('');
+    setTempFrameImageUrl('');
+    setTempFrameRatioW('1');
+    setTempFrameRatioH('1');
+    setTempPhotoLeft('26.5');
+    setTempPhotoTop('11');
+    setTempPhotoWidth('47.4');
+    setTempPhotoHeight('74.2');
     setFormError('');
     setShowNewCategoryInput(false);
     setNewCategoryName('');
@@ -352,7 +394,9 @@ export default function AdminDashboardPage() {
 
     setUploadingImage(true);
     try {
-      const compressed = await compressImage(file);
+      const originalName = file.name.toLowerCase();
+      const isFrameImage = originalName.includes('background-remove') || originalName.endsWith('background-remove.png');
+      const compressed = isFrameImage ? file : await compressImage(file);
       const formData = new FormData();
       formData.append('file', compressed);
       formData.append('folder', 'products');
@@ -366,12 +410,13 @@ export default function AdminDashboardPage() {
       if (!res.ok) throw new Error(data.error || 'Failed to upload image');
 
       const isFirst = formImages.length === 0;
+
       const newImage: ProductImage = {
         imageUrl: data.url,
         cloudinaryPublicId: data.publicId,
         isThumbnail: isFirst,
         sortOrder: formImages.length,
-        altText: `${formName || 'Product'} Image ${formImages.length + 1}`,
+        altText: isFrameImage ? 'background-remove.png' : `${formName || 'Product'} Image ${formImages.length + 1}`,
       };
 
       setFormImages([...formImages, newImage]);
@@ -441,6 +486,68 @@ export default function AdminDashboardPage() {
     setFormMaterials(formMaterials.filter((_, idx) => idx !== index));
   };
 
+  const addFrameConfig = () => {
+    if (!tempFrameSize || !tempFrameImageUrl) {
+      alert('Size and Frame Image are required for frame configuration');
+      return;
+    }
+
+    const ratioW = parseFloat(tempFrameRatioW);
+    const ratioH = parseFloat(tempFrameRatioH);
+    const left = parseFloat(tempPhotoLeft);
+    const top = parseFloat(tempPhotoTop);
+    const width = parseFloat(tempPhotoWidth);
+    const height = parseFloat(tempPhotoHeight);
+
+    if (isNaN(ratioW) || ratioW <= 0 || isNaN(ratioH) || ratioH <= 0) {
+      alert('Aspect ratio width and height must be positive numbers');
+      return;
+    }
+
+    if (isNaN(left) || left < 0 || isNaN(top) || top < 0 || isNaN(width) || width <= 0 || isNaN(height) || height <= 0) {
+      alert('Photo opening values must be valid positive coordinates (left, top >= 0; width, height > 0)');
+      return;
+    }
+
+    if (left + width > 100 || top + height > 100) {
+      alert('Photo opening box exceeds bounds! Left + Width must be <= 100%, and Top + Height must be <= 100%');
+      return;
+    }
+
+    // Check if configuration already exists for this size
+    const sizeExists = formFrameConfigs.some(fc => fc.size === tempFrameSize);
+    if (sizeExists) {
+      alert(`A frame configuration already exists for size "${tempFrameSize}". Delete the existing one first.`);
+      return;
+    }
+
+    const newConfig: ProductFrameConfig = {
+      size: tempFrameSize,
+      frameImageUrl: tempFrameImageUrl,
+      aspectRatioWidth: ratioW,
+      aspectRatioHeight: ratioH,
+      photoAreaLeft: left,
+      photoAreaTop: top,
+      photoAreaWidth: width,
+      photoAreaHeight: height,
+      enabled: true
+    };
+
+    setFormFrameConfigs([...formFrameConfigs, newConfig]);
+    setTempFrameSize('');
+    setTempFrameImageUrl('');
+    setTempFrameRatioW('1');
+    setTempFrameRatioH('1');
+    setTempPhotoLeft('26.5');
+    setTempPhotoTop('11');
+    setTempPhotoWidth('47.4');
+    setTempPhotoHeight('74.2');
+  };
+
+  const removeFrameConfig = (index: number) => {
+    setFormFrameConfigs(formFrameConfigs.filter((_, idx) => idx !== index));
+  };
+
   // 5. Submit CRUD Handler
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -465,6 +572,7 @@ export default function AdminDashboardPage() {
       images: formImages,
       variants: formVariants,
       materials: formMaterials,
+      frameConfigs: formFrameConfigs,
     };
 
     try {
@@ -1234,7 +1342,6 @@ export default function AdminDashboardPage() {
                     </table>
                   </div>
                 )}
-
                 {/* Add Variant Form */}
                 <div className="bg-neutral-50 dark:bg-neutral-950/80 p-5 border border-neutral-200 dark:border-neutral-800 rounded grid grid-cols-2 md:grid-cols-6 gap-4 items-end">
                   <div className="space-y-1.5 col-span-2 md:col-span-1">
@@ -1294,6 +1401,233 @@ export default function AdminDashboardPage() {
                   >
                     + Variant
                   </button>
+                </div>
+              </div>
+
+              {/* SECTION 3.5: Dynamic Frame Configurations */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-secondary border-b border-neutral-200 dark:border-neutral-800 pb-2">3.5. Dynamic Frame Layout Configurations</h4>
+                
+                {/* Configured Frames Table */}
+                {formFrameConfigs.length > 0 ? (
+                  <div className="overflow-x-auto border border-neutral-200 dark:border-neutral-800 rounded bg-neutral-50 dark:bg-neutral-950/40">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-950 font-bold uppercase text-[9px] tracking-wider text-neutral-500 dark:text-neutral-400">
+                          <th className="p-3">Variant Size</th>
+                          <th className="p-3">Ratio (W:H)</th>
+                          <th className="p-3">Photo Crop Bounds (Left, Top, Width, Height)</th>
+                          <th className="p-3">Template Image</th>
+                          <th className="p-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {formFrameConfigs.map((fc, idx) => (
+                          <tr key={idx} className="border-b border-neutral-200 dark:border-neutral-800">
+                            <td className="p-3 font-semibold">{fc.size}</td>
+                            <td className="p-3 font-mono">{fc.aspectRatioWidth} : {fc.aspectRatioHeight}</td>
+                            <td className="p-3 font-mono">
+                              L: {fc.photoAreaLeft}%, T: {fc.photoAreaTop}%, W: {fc.photoAreaWidth}%, H: {fc.photoAreaHeight}%
+                            </td>
+                            <td className="p-3 truncate max-w-[200px]" title={fc.frameImageUrl}>
+                              {fc.frameImageUrl.split('/').pop()}
+                            </td>
+                            <td className="p-3 text-right">
+                              <button
+                                type="button"
+                                onClick={() => removeFrameConfig(idx)}
+                                className="text-red-500 hover:text-red-400 font-bold uppercase text-[10px]"
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded text-neutral-400 text-center italic">
+                    No dynamic frame layouts configured yet. Fallbacks will apply.
+                  </div>
+                )}
+
+                {/* Add Frame Config Form & Live Preview */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start bg-neutral-50 dark:bg-neutral-950/80 p-5 border border-neutral-200 dark:border-neutral-800 rounded">
+                  
+                  {/* Left Form Inputs */}
+                  <div className="lg:col-span-2 space-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      
+                      {/* Target Size Dropdown */}
+                      <div className="space-y-1.5 col-span-2 md:col-span-2">
+                        <label className="text-[10px] text-neutral-500 dark:text-neutral-400 uppercase font-bold">Target Size Variant</label>
+                        <select
+                          value={tempFrameSize}
+                          onChange={(e) => setTempFrameSize(e.target.value)}
+                          className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary text-neutral-800 dark:text-white"
+                        >
+                          <option value="">-- Select Size --</option>
+                          {Array.from(new Set(formVariants.map((v) => v.size))).map((size) => (
+                            <option key={size} value={size}>{size}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Image Selection from uploaded assets */}
+                      <div className="space-y-1.5 col-span-2 md:col-span-2">
+                        <label className="text-[10px] text-neutral-500 dark:text-neutral-400 uppercase font-bold">Frame Template Image</label>
+                        <select
+                          value={tempFrameImageUrl}
+                          onChange={(e) => setTempFrameImageUrl(e.target.value)}
+                          className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary text-neutral-800 dark:text-white"
+                        >
+                          <option value="">-- Choose Template Image --</option>
+                          {formImages.map((img, idx) => (
+                            <option key={idx} value={img.imageUrl}>
+                              {img.altText || `Asset ${idx + 1}`} ({img.imageUrl.split('/').pop()})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Aspect Ratio Width */}
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-neutral-500 dark:text-neutral-400 uppercase font-bold">Ratio Width</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          placeholder="8"
+                          value={tempFrameRatioW}
+                          onChange={(e) => setTempFrameRatioW(e.target.value)}
+                          className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary text-neutral-800 dark:text-white"
+                        />
+                      </div>
+
+                      {/* Aspect Ratio Height */}
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-neutral-500 dark:text-neutral-400 uppercase font-bold">Ratio Height</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          placeholder="12"
+                          value={tempFrameRatioH}
+                          onChange={(e) => setTempFrameRatioH(e.target.value)}
+                          className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary text-neutral-800 dark:text-white"
+                        />
+                      </div>
+
+                      {/* Manual text backup for imageUrl if needed */}
+                      <div className="space-y-1.5 col-span-2">
+                        <label className="text-[10px] text-neutral-500 dark:text-neutral-400 uppercase font-bold">Or Frame Image URL (Fallback)</label>
+                        <input
+                          type="text"
+                          placeholder="https://cloudinary.com/.../background-remove.png"
+                          value={tempFrameImageUrl}
+                          onChange={(e) => setTempFrameImageUrl(e.target.value)}
+                          className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary text-neutral-800 dark:text-white placeholder:text-neutral-400"
+                        />
+                      </div>
+
+                    </div>
+
+                    {/* Coordinates Grid */}
+                    <div className="grid grid-cols-4 gap-4">
+                      
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-neutral-500 dark:text-neutral-400 uppercase font-bold">Photo Left (%)</label>
+                        <input
+                          type="number"
+                          step="0.05"
+                          placeholder="26.5"
+                          value={tempPhotoLeft}
+                          onChange={(e) => setTempPhotoLeft(e.target.value)}
+                          className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary text-neutral-800 dark:text-white font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-neutral-500 dark:text-neutral-400 uppercase font-bold">Photo Top (%)</label>
+                        <input
+                          type="number"
+                          step="0.05"
+                          placeholder="11"
+                          value={tempPhotoTop}
+                          onChange={(e) => setTempPhotoTop(e.target.value)}
+                          className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary text-neutral-800 dark:text-white font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-neutral-500 dark:text-neutral-400 uppercase font-bold">Photo Width (%)</label>
+                        <input
+                          type="number"
+                          step="0.05"
+                          placeholder="47.4"
+                          value={tempPhotoWidth}
+                          onChange={(e) => setTempPhotoWidth(e.target.value)}
+                          className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary text-neutral-800 dark:text-white font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-neutral-500 dark:text-neutral-400 uppercase font-bold">Photo Height (%)</label>
+                        <input
+                          type="number"
+                          step="0.05"
+                          placeholder="74.2"
+                          value={tempPhotoHeight}
+                          onChange={(e) => setTempPhotoHeight(e.target.value)}
+                          className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded outline-none focus:border-primary text-neutral-800 dark:text-white font-mono"
+                        />
+                      </div>
+
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={addFrameConfig}
+                      className="w-full py-2.5 bg-secondary text-white font-bold uppercase tracking-widest hover:bg-secondary/95 transition-all rounded text-[10px] cursor-pointer"
+                    >
+                      + Save Frame Config for Size
+                    </button>
+                  </div>
+
+                  {/* Right Live Preview Box */}
+                  <div className="flex flex-col items-center justify-center p-4 border border-neutral-200 dark:border-neutral-800 rounded bg-white dark:bg-neutral-950 font-sans w-full min-h-[220px]">
+                    <span className="text-[9px] uppercase tracking-wider font-bold text-neutral-400 mb-3">Live crop preview</span>
+                    
+                    {tempFrameImageUrl ? (
+                      <div 
+                        className="relative w-full max-w-[160px] border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 overflow-hidden shadow-md rounded"
+                        style={{ aspectRatio: `${parseFloat(tempFrameRatioW) || 1}/${parseFloat(tempFrameRatioH) || 1}` }}
+                      >
+                        {/* Highlighted Crop Area in background */}
+                        <div 
+                          className="absolute bg-blue-500/20 border border-blue-500 flex items-center justify-center text-[8px] text-blue-500 font-bold select-none"
+                          style={{
+                            left: `${parseFloat(tempPhotoLeft) || 0}%`,
+                            top: `${parseFloat(tempPhotoTop) || 0}%`,
+                            width: `${parseFloat(tempPhotoWidth) || 100}%`,
+                            height: `${parseFloat(tempPhotoHeight) || 100}%`,
+                          }}
+                        >
+                          Photo Area
+                        </div>
+                        {/* Frame overlay on top */}
+                        <img 
+                          src={tempFrameImageUrl} 
+                          alt="Frame template" 
+                          className="absolute inset-0 w-full h-full object-fill pointer-events-none select-none z-10"
+                        />
+                      </div>
+                    ) : (
+                      <div className="text-center text-[10px] text-neutral-400 italic">
+                        Select a frame image to see crop coordinates bounding preview.
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               </div>
 

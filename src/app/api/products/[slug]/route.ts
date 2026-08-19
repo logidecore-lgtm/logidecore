@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
-    const product = await db.product.findUnique({
+    const product = await db.product.findFirst({
       where: { slug, isActive: true },
       include: {
         images: {
@@ -20,6 +20,7 @@ export async function GET(
           orderBy: { sortOrder: 'asc' },
         },
         category: true,
+        frameConfigs: true,
       },
     });
 

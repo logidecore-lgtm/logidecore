@@ -10,30 +10,43 @@ const globalForPrisma = global as unknown as {
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-  throw new Error(
-    'DATABASE_URL is required. Add the Neon pooled connection string to Vercel for the Production environment.'
-  );
+  throw new Error('DATABASE_URL is required');
 }
 
 let pool: Pool;
 let prismaClient: PrismaClient;
 
-if (process.env.NODE_ENV === 'production') {
-  pool = new Pool({ connectionString, max: 1 });
-  const adapter = new PrismaPg(pool);
-  prismaClient = new PrismaClient({ adapter });
-} else {
-  if (!globalForPrisma.pool) {
-    globalForPrisma.pool = new Pool({ connectionString });
-  }
-  pool = globalForPrisma.pool;
+const isProduction = process.env.NODE_ENV === 'production';
 
-  if (!globalForPrisma.prisma) {
-    const adapter = new PrismaPg(pool);
-    globalForPrisma.prisma = new PrismaClient({ adapter });
-  }
-  prismaClient = globalForPrisma.prisma;
+const createPool = () =>
+  new Pool({
+    connectionString,
+    ssl: connectionString.includes('sslmode=require')
+      ? { rejectUnauthorized: false }
+      : undefined,
+    max: isProduction ? 10 : 3,
+    min: 0,
+    idleTimeoutMillis: 60000,
+    connectionTimeoutMillis: 30000,
+    keepAlive: true,
+    allowExitOnIdle: !isProduction,
+  });
+
+if (!globalForPrisma.pool) {
+  globalForPrisma.pool = createPool();
 }
+
+pool = globalForPrisma.pool;
+
+if (!globalForPrisma.prisma) {
+  const adapter = new PrismaPg(pool);
+
+  globalForPrisma.prisma = new PrismaClient({
+    adapter,
+  });
+}
+
+prismaClient = globalForPrisma.prisma;
 
 export const db = prismaClient;
 export * from '@prisma/client';

@@ -50,6 +50,7 @@ model Product {
   materials        ProductMaterial[]
   reviews          Review[]
   wishlists        Wishlist[]
+  frameConfigs     ProductFrameConfig[]
 
   @@map("products")
 }
@@ -290,4 +291,24 @@ model ReviewScreenshot {
   createdAt          DateTime  @default(now()) @map("created_at")
 
   @@map("review_screenshots")
+}
+
+model ProductFrameConfig {
+  id                 String   @id @default(cuid())
+  productId          String   @map("product_id")
+  product            Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size               String   // Normalized size key (e.g. "8x12")
+  frameImageUrl      String   @map("frame_image_url")
+  aspectRatioWidth   Float    @map("aspect_ratio_width")
+  aspectRatioHeight  Float    @map("aspect_ratio_height")
+  photoAreaLeft      Float    @map("photo_area_left")
+  photoAreaTop       Float    @map("photo_area_top")
+  photoAreaWidth     Float    @map("photo_area_width")
+  photoAreaHeight    Float    @map("photo_area_height")
+  enabled            Boolean  @default(true)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@unique([productId, size])
+  @@map("product_frame_configs")
 }

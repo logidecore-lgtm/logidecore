@@ -55,13 +55,16 @@ export function compressImage(file: File, maxWidth = 1600, maxHeight = 1600, qua
         // Draw image onto canvas (resizes high-res images cleanly)
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Convert the canvas to a compressed JPEG Blob
+        const preserveAlpha = file.type === 'image/png' || file.type === 'image/webp';
+        const outputMime = preserveAlpha ? file.type : 'image/jpeg';
+
+        // Convert the canvas to a compressed image Blob while preserving transparency when needed
         canvas.toBlob(
           (blob) => {
             if (blob) {
               // Create a new File from Blob to retain the original filename
               const compressedFile = new File([blob], file.name, {
-                type: 'image/jpeg',
+                type: outputMime,
                 lastModified: Date.now(),
               });
               resolve(compressedFile);
@@ -69,7 +72,7 @@ export function compressImage(file: File, maxWidth = 1600, maxHeight = 1600, qua
               resolve(file);
             }
           },
-          'image/jpeg',
+          outputMime,
           quality
         );
       };
